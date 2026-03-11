@@ -2,85 +2,188 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.11</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
+
 	<groupId>com.watchtower</groupId>
 	<artifactId>watchtower-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>watchtower-backend</name>
-	<description>Watch Tower - Smart Network Intelligence and Diagnosis System</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+	<description>WatchTower - Smart Network Intelligence and Diagnosis System</description>
+
 	<properties>
 		<java.version>17</java.version>
 	</properties>
+
 	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-mail</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-validation</artifactId>
-		</dependency>
+
+		<!-- ══════════════════════════════════════════════ -->
+		<!--  CORE SPRING BOOT                             -->
+		<!-- ══════════════════════════════════════════════ -->
+
+		<!-- Spring Web — @RestController, DispatcherServlet, Spring MVC -->
+		<!-- AJT: Unit 6 Servlets + Unit 7 RESTful Web Services           -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
+		<!-- Spring Data JPA + Hibernate — @Entity, @ManyToOne, JPQL    -->
+		<!-- AJT: Unit 4 JDBC + Unit 8 ORM / Hibernate                  -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+
+		<!-- Spring Security — login, BCrypt, role-based access          -->
+		<!-- AJT: Unit 8 Spring Security                                 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<!-- Spring Mail — JavaMailSender, MimeMessage, Gmail SMTP       -->
+		<!-- AJT: Unit 7 Java Mail API                                   -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
+		<!-- Thymeleaf — login.html, dashboard.html server-side templates -->
+		<!-- AJT: Unit 6 Web Layer                                        -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+
+		<!-- Thymeleaf + Spring Security integration (sec:authorize tags) -->
+		<dependency>
+			<groupId>org.thymeleaf.extras</groupId>
+			<artifactId>thymeleaf-extras-springsecurity6</artifactId>
+		</dependency>
+
+		<!-- Bean Validation — @NotNull, @Size, @Email on request DTOs   -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<!-- DevTools — auto-restart on file save during development      -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
 			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
+
+
+		<!-- ══════════════════════════════════════════════ -->
+		<!--  DATABASE                                     -->
+		<!-- ══════════════════════════════════════════════ -->
+
+		<!-- PostgreSQL JDBC Driver — runtime only, JPA uses it          -->
+		<!-- AJT: Unit 4 JDBC — DriverManager uses this driver           -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+
+		<!-- Flyway — database migration (V1__init, V2__..., etc.)       -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+
+		<!-- Flyway PostgreSQL support (required for Flyway 10+)         -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+
+
+		<!-- ══════════════════════════════════════════════ -->
+		<!--  UTILITIES                                    -->
+		<!-- ══════════════════════════════════════════════ -->
+
+		<!-- Lombok — @Data, @NoArgsConstructor, @AllArgsConstructor     -->
+		<!-- Eliminates boilerplate getters/setters/constructors          -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
+
+		<!-- Jackson — automatic Java object ↔ JSON conversion           -->
+		<!-- Used by every @RestController response                       -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+
+		<!-- Jackson Java 8 Date/Time support — LocalDateTime in JSON    -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+		</dependency>
+
+
+		<!-- ══════════════════════════════════════════════ -->
+		<!--  AI / ANALYTICS (Day 7)                       -->
+		<!-- ══════════════════════════════════════════════ -->
+
+		<!-- Apache Commons Math — K-Means clustering (ClusteringService) -->
+		<!-- KMeansPlusPlusClusterer with k=3 device clusters             -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>3.6.1</version>
+		</dependency>
+
+
+		<!-- ══════════════════════════════════════════════ -->
+		<!--  PDF EXPORT (Day 9)                           -->
+		<!-- ══════════════════════════════════════════════ -->
+
+		<!-- iText 5 — PDF weekly report generation (ReportController)   -->
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>itextpdf</artifactId>
+			<version>5.5.13.3</version>
+		</dependency>
+
+
+		<!-- ══════════════════════════════════════════════ -->
+		<!--  TESTING                                      -->
+		<!-- ══════════════════════════════════════════════ -->
+
+		<!-- Spring Boot Test — JUnit 5, Mockito, MockMvc                -->
+		<!-- SimulatorServiceTest + DiagnosisEngineTest (Day 9)          -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Spring Security Test — @WithMockUser for secured endpoints  -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
 	</dependencies>
+
 
 	<build>
 		<plugins>
+
+			<!-- Lombok annotation processor — must be declared here     -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -93,6 +196,8 @@
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
+
+			<!-- Spring Boot Maven plugin — mvn spring-boot:run          -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
@@ -105,6 +210,7 @@
 					</excludes>
 				</configuration>
 			</plugin>
+
 		</plugins>
 	</build>
 
