@@ -24,7 +24,7 @@ public class AlertController {
     @GetMapping
     @Transactional(readOnly = true)
     public List<Alert> getActiveAlerts() {
-        return alertRepository.findByIsResolvedFalseOrderBySeverityDesc();
+        return alertRepository.findByIsResolvedFalseOrderByCreatedAtDesc();
     }
 
     // GET /api/alerts/all?page=0&size=20 — paginated full history
@@ -65,7 +65,7 @@ public class AlertController {
     // PUT /api/alerts/resolve-all — bulk-resolve all open alerts
     @PutMapping("/resolve-all")
     public Map<String, String> resolveAll() {
-        List<Alert> open = alertRepository.findByIsResolvedFalseOrderBySeverityDesc();
+        List<Alert> open = alertRepository.findByIsResolvedFalseOrderByCreatedAtDesc();
         open.forEach(a -> a.setIsResolved(true));
         alertRepository.saveAll(open);
         return Map.of("message", "All " + open.size() + " alerts resolved");

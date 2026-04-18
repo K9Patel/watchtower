@@ -9,20 +9,64 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 
+// Auth pages
+import LoginPage from './pages/auth/LoginPage';
+import SignupPage from './pages/auth/SignupPage';
+import VerifyEmailPage from './pages/auth/VerifyEmailPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+
+// Auth guard
+import ProtectedRoute from './components/ProtectedRoute';
+
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<OverviewPage />} />
-          <Route path="/devices" element={<DevicesPage />} />
-          <Route path="/devices/:id" element={<DeviceDetailPage />} />
-          <Route path="/alerts" element={<AlertsPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        {/* Public Auth Routes (no Layout) */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* Protected Dashboard Routes (with Layout) */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Layout><OverviewPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/devices" element={
+          <ProtectedRoute>
+            <Layout><DevicesPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/devices/:id" element={
+          <ProtectedRoute>
+            <Layout><DeviceDetailPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/alerts" element={
+          <ProtectedRoute>
+            <Layout><AlertsPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/analytics" element={
+          <ProtectedRoute>
+            <Layout><AnalyticsPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/reports" element={
+          <ProtectedRoute>
+            <Layout><ReportsPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Layout><SettingsPage /></Layout>
+          </ProtectedRoute>
+        } />
+      </Routes>
     </BrowserRouter>
   );
 }

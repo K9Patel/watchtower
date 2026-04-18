@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Activity, BarChart3, Zap, FileText, Settings, Menu, X, Home, AlertCircle } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Activity, BarChart3, FileText, Settings, Menu, X, Home, AlertCircle, LogOut, User } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
+import { logoutApi } from './config/authApi';
 import './Layout.css';
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { path: '/', label: 'Overview', icon: Home },
@@ -17,6 +21,16 @@ const Layout = ({ children }) => {
   ];
 
   const isActive = (path) => location.pathname === path;
+
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+    } catch (err) {
+      // Logout even if API call fails
+    }
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="layout-container">
@@ -60,14 +74,35 @@ const Layout = ({ children }) => {
         </nav>
 
         <div className="sidebar-footer">
-          {sidebarOpen && (
-            <div className="status-info">
-              <div className="status-badge">
-                <div className="status-dot"></div>
-                <span>Live</span>
+          {sidebarOpen ? (
+            <div className="user-info">
+              <div className="user-avatar">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user.name} />
+                ) : (
+                  <User size={18} />
+                )}
               </div>
-              <p>System Status: Online</p>
+              <div className="user-details">
+                <p className="user-name">{user?.name || 'User'}</p>
+                <p className="user-email">{user?.email || ''}</p>
+              </div>
+              <button
+                className="logout-btn"
+                onClick={handleLogout}
+                title="Sign out"
+              >
+                <LogOut size={16} />
+              </button>
             </div>
+          ) : (
+            <button
+              className="nav-item logout-collapsed"
+              onClick={handleLogout}
+              title="Sign out"
+            >
+              <LogOut size={20} />
+            </button>
           )}
         </div>
       </aside>

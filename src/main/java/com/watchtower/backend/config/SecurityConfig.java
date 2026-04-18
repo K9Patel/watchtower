@@ -1,30 +1,48 @@
 package com.watchtower.backend.config;
 
+import com.watchtower.backend.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
- * AJT — Spring Security + BCrypt:
+ * Spring Security configuration — JWT-based stateless authentication.
  *
- * - Secures all non-public endpoints behind form-based login
- * - /api/* endpoints are permitted without login (for dashboard AJAX calls)
- * - /login and /static/** are always public
- * - Passwords are stored as BCrypt hashes (cost=10)
+ * Public routes:
+ *   - /api/v1/auth/** (signup, login, verify, etc.)
+ *   - /api/** (existing dashboard API — kept for backward compatibility)
+ *   - /login, /static/**, /diagnosis (existing public pages)
  *
- * The admin user matches the BCrypt hash in V1 migration (admin / admin123).
+ * Protected routes:
+ *   - Everything else requires a valid JWT Bearer token
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final UserDetailsService userDetailsService;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, UserDetailsService userDetailsService) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.userDetailsService = userDetailsService;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -32,53 +50,63 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-        // Same hash as V1 SQL seed: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lvcW
-        UserDetails admin = User.builder()
-                .username("admin")
-                .password("$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lvcW")
-                .roles("ADMIN")
-                .build();
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
 
-        UserDetails user = User.builder()
-                .username("user")
-                .password(encoder.encode("user123"))
-                .roles("USER")
-                .build();
-
-        return new InMemoryUserDetailsManager(admin, user);
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())  // Stateless JWT — no CSRF needed
             .authorizeHttpRequests(auth -> auth
-                // Public: API routes used by Vite dashboard (separate origin)
+                // Auth endpoints — public
+                .requestMatchers("/api/v1/auth/**").permitAll()
+                // Existing dashboard API — public (backward compatibility)
                 .requestMatchers("/api/**").permitAll()
                 // Public: WebSocket endpoint (SockJS uses HTTP for handshake)
                 .requestMatchers("/ws/**").permitAll()
                 // Public: static assets + login page
                 .requestMatchers("/", "/login", "/css/**", "/js/**",
                                  "/static/**", "/favicon.ico").permitAll()
-                // Public: raw Servlet endpoint for AJT demo
                 .requestMatchers("/diagnosis").permitAll()
-                // Everything else requires login
+                // Everything else requires authentication
                 .anyRequest().authenticated()
             )
-            .formLogin(form -> form
-                .loginPage("/login")
-                .defaultSuccessUrl("/dashboard", true)
-                .permitAll()
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            .logout(logout -> logout
-                .logoutSuccessUrl("/login?logout")
-                .permitAll()
-            )
-            // Disable CSRF for API routes (React/Vite sends JSON without CSRF tokens)
-            .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/**", "/ws/**")
-            );
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+            "http://localhost:5173",   // Vite dev server
+            "http://localhost:5174",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174"
+        ));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }

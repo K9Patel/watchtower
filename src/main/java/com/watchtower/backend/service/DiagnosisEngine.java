@@ -40,7 +40,7 @@ public class DiagnosisEngine {
     @Scheduled(fixedRate = 30_000)
     public void runDiagnosis() {
         List<Device> activeDevices = deviceRepository.findByIsActiveTrue();
-        LocalDateTime since = LocalDateTime.now().minusSeconds(60);
+        LocalDateTime since = LocalDateTime.now().minusSeconds(30);
 
         int alertsFired = 0;
 
@@ -53,10 +53,11 @@ public class DiagnosisEngine {
             // Strategy Pattern: evaluate each rule against this device's logs
             for (DiagnosisRule rule : rules) {
                 try {
-                    rule.evaluate(device, recent).ifPresent(alert -> {
-                        alertPublisher.publish(alert); // Observer Pattern
-                    });
-                    alertsFired++;
+                    var maybeAlert = rule.evaluate(device, recent);
+                    if (maybeAlert.isPresent()) {
+                        alertPublisher.publish(maybeAlert.get()); // Observer Pattern
+                        alertsFired++;
+                    }
                 } catch (Exception e) {
                     log.error("DiagnosisEngine: rule {} failed for {} — {}",
                             rule.getClass().getSimpleName(),

@@ -12,8 +12,8 @@ import java.util.List;
 @Repository
 public interface AlertRepository extends JpaRepository<Alert, Long> {
 
-    // Dashboard alert feed: unresolved alerts, CRITICAL first
-    List<Alert> findByIsResolvedFalseOrderBySeverityDesc();
+    // Dashboard alert feed: unresolved alerts, newest first
+    List<Alert> findByIsResolvedFalseOrderByCreatedAtDesc();
 
     // EmailAlertService: check existing unresolved alerts per device
     List<Alert> findByDeviceAndIsResolvedFalse(Device device);

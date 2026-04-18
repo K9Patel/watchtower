@@ -53,7 +53,7 @@ const AlertsPage = () => {
     if (searchTerm) {
       filtered = filtered.filter(
         (a) =>
-          a.deviceName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          a.device?.deviceName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           a.message?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -86,7 +86,7 @@ const AlertsPage = () => {
 
   const markAsResolved = async (id) => {
     try {
-      await axios.patch(`${API_BASE_URL}/alerts/${id}/resolve`);
+      await axios.put(`${API_BASE_URL}/alerts/${id}/resolve`);
       fetchAlerts();
     } catch (error) {
       console.error('Error resolving alert:', error);
@@ -179,7 +179,7 @@ const AlertsPage = () => {
             <div className="alert-content">
               <div className="alert-header">
                 <h3 className="alert-severity">{alert.severity}</h3>
-                <span className="alert-device">{alert.deviceName}</span>
+                <span className="alert-device">{alert.device?.deviceName || 'Unknown Device'}</span>
                 {alert.isResolved && <span className="resolved-badge">✓ Resolved</span>}
               </div>
               <p className="alert-message">{alert.message}</p>
