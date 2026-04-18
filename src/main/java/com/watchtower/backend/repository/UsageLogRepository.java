@@ -28,14 +28,14 @@ public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
     Page<UsageLog> findAllByOrderByTimestampDesc(Pageable pageable);
 
     // HistoryAnalysisService: daily usage totals — PostgreSQL DATE() function
-    @Query("SELECT CAST(u.timestamp AS date), SUM(u.bytesUsed) " +
+    @Query("SELECT CAST(u.timestamp AS date), SUM(u.bytesUsed), MAX(u.bandwidthPercentage) " +
            "FROM UsageLog u WHERE u.timestamp >= :since " +
            "GROUP BY CAST(u.timestamp AS date) " +
            "ORDER BY CAST(u.timestamp AS date)")
     List<Object[]> findDailyTotals(@Param("since") LocalDateTime since);
 
     // HistoryAnalysisService: peak hours heatmap — avg load per hour
-    @Query("SELECT EXTRACT(HOUR FROM u.timestamp), AVG(u.bandwidthPercentage) " +
+    @Query("SELECT EXTRACT(HOUR FROM u.timestamp), SUM(u.bytesUsed) " +
            "FROM UsageLog u WHERE u.timestamp >= :since " +
            "GROUP BY EXTRACT(HOUR FROM u.timestamp) " +
            "ORDER BY EXTRACT(HOUR FROM u.timestamp)")
@@ -44,4 +44,7 @@ public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
     // TrendAnalysisService: last 30 readings for linear regression
     @Query("SELECT u FROM UsageLog u ORDER BY u.timestamp DESC")
     List<UsageLog> findTop30ForTrend(Pageable pageable);
+
+    // RealModeInitializer: delete all logs for a given device (used for cleanup)
+    int deleteByDevice(Device device);
 }

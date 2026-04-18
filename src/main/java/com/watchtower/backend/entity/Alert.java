@@ -1,5 +1,6 @@
 package com.watchtower.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -13,8 +14,9 @@ public class Alert {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "device_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "usageLogs", "alerts"})
     private Device device;
 
     @Column(name = "alert_type", nullable = false, length = 50)

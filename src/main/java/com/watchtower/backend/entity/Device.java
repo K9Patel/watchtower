@@ -1,5 +1,6 @@
 package com.watchtower.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Device {
 
     @Id
@@ -25,10 +27,6 @@ public class Device {
     @Column(name = "mac_address", length = 17)
     private String macAddress;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "device_type", nullable = false, length = 20)
-    private DeviceType deviceType;
-
     @Builder.Default
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
@@ -41,7 +39,10 @@ public class Device {
     @Column(name = "registered_at")
     private LocalDateTime registeredAt = LocalDateTime.now();
 
-    public enum DeviceType {
-        STUDENT, STAFF, ADMIN
-    }
+    // Tracks the last time this device was seen in a live network scan.
+    // If this is null or very old → device has left the network.
+    @Builder.Default
+    @Column(name = "last_seen_at")
+    private LocalDateTime lastSeenAt = LocalDateTime.now();
+    
 }

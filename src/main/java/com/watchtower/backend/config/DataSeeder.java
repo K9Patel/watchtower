@@ -5,12 +5,14 @@ import com.watchtower.backend.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @Order(2)
+@Profile("simulator")   // AJT: only seed fake devices in simulator mode, NOT in real network mode
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
 
@@ -33,7 +35,6 @@ public class DataSeeder implements CommandLineRunner {
                 .deviceName("Student-Laptop-" + String.format("%02d", i))
                 .ipAddress("192.168.1." + (100 + i))
                 .macAddress(generateMac(i))
-                .deviceType(Device.DeviceType.STUDENT)
                 .build());
         }
 
@@ -43,7 +44,6 @@ public class DataSeeder implements CommandLineRunner {
                 .deviceName("Staff-PC-" + String.format("%02d", i))
                 .ipAddress("192.168.2." + (10 + i))
                 .macAddress(generateMac(20 + i))
-                .deviceType(Device.DeviceType.STAFF)
                 .build());
         }
 
@@ -53,7 +53,6 @@ public class DataSeeder implements CommandLineRunner {
                 .deviceName("Admin-Server-" + String.format("%02d", i))
                 .ipAddress("192.168.3." + (1 + i))
                 .macAddress(generateMac(30 + i))
-                .deviceType(Device.DeviceType.ADMIN)
                 .build());
         }
 
