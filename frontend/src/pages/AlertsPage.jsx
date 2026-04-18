@@ -112,6 +112,25 @@ const AlertsPage = () => {
           <p className="page-subtitle">Network notifications and events</p>
         </div>
         <div className="header-stats">
+          {unresolvedCount > 0 && (
+            <button
+              onClick={async () => {
+                await axios.put(`${API_BASE_URL}/alerts/resolve-all`);
+                fetchAlerts();
+              }}
+              style={{
+                background: 'rgba(34,197,94,0.12)',
+                border: '1px solid rgba(34,197,94,0.35)',
+                color: '#22c55e',
+                borderRadius: '8px',
+                fontWeight: 700,
+                padding: '10px 14px',
+                cursor: 'pointer'
+              }}
+            >
+              Resolve All
+            </button>
+          )}
           <div className="stat">
             <span className="stat-value" style={{ color: '#ef4444' }}>
               {unresolvedCount}

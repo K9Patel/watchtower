@@ -76,7 +76,7 @@ const AlertsPanel = ({ alerts, onRefresh }) => {
                 </div>
                 <p style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>{a.message}</p>
                 <div style={{ marginTop: '12px', fontSize: '11px', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Device ID: {a.device.id}</span>
+                  <span>Device: {a.device?.deviceName || `#${a.device?.id || 'N/A'}`}</span>
                   <span>{new Date(a.createdAt).toLocaleTimeString()}</span>
                 </div>
               </div>

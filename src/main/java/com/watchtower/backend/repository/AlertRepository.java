@@ -15,6 +15,9 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     // Dashboard alert feed: unresolved alerts, newest first
     List<Alert> findByIsResolvedFalseOrderByCreatedAtDesc();
 
+    // Compatibility query used by recommendation and RMI layers.
+    List<Alert> findByIsResolvedFalseOrderBySeverityDesc();
+
     // EmailAlertService: check existing unresolved alerts per device
     List<Alert> findByDeviceAndIsResolvedFalse(Device device);
 

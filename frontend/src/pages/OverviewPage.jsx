@@ -96,7 +96,7 @@ const OverviewPage = () => {
       {/* Toast Alert */}
       {toastAlert && (
         <div style={{
-          position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', top: '20px', right: '20px',
           background: 'linear-gradient(135deg, #ef4444, #b91c1c)', color: 'white',
           padding: '12px 24px', borderRadius: '8px', zIndex: 1000,
           boxShadow: '0 10px 25px rgba(239, 68, 68, 0.4)', fontWeight: 600,

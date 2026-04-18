@@ -19,7 +19,7 @@ import java.util.List;
  *
  * DiagnosisEngine runs every 30 seconds in a background thread.
  * For each active device it:
- *   1. Grabs last 60 seconds of UsageLogs
+ *   1. Grabs last 30 seconds of UsageLogs
  *   2. Iterates all DiagnosisRule strategies (Strategy Pattern)
  *   3. If any rule fires → publishes the resulting Alert (Observer Pattern)
  *
@@ -67,7 +67,7 @@ public class DiagnosisEngine {
             }
         }
 
-        log.debug("DiagnosisEngine: scanned {} devices, {} rule evaluations.",
+        log.debug("DiagnosisEngine: scanned {} devices, {} alerts fired.",
                 activeDevices.size(), alertsFired);
     }
 }
