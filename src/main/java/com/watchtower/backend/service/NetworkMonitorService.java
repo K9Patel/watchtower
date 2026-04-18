@@ -32,8 +32,15 @@ public class NetworkMonitorService {
 
         for (Device device : devices) {
             try {
+                // Device may have been deleted/updated by another scheduler cycle.
+                var fresh = deviceRepository.findById(device.getId());
+                if (fresh.isEmpty()) {
+                    continue;
+                }
+                Device current = fresh.get();
+
                 // AJT Unit 3: InetAddress.getByName() resolves IP string to InetAddress object
-                InetAddress addr = InetAddress.getByName(device.getIpAddress());
+                InetAddress addr = InetAddress.getByName(current.getIpAddress());
 
                 // isReachable(2000) = ping with 2 second timeout
                 boolean reachable = addr.isReachable(2000);
@@ -41,10 +48,10 @@ public class NetworkMonitorService {
                 String newStatus = reachable ? "ONLINE" : "OFFLINE";
 
                 // only save if status actually changed — avoid unnecessary DB writes
-                if (!newStatus.equals(device.getStatus())) {
-                    device.setStatus(newStatus);
-                    deviceRepository.save(device);
-                    log.info("Device {} status changed to {}", device.getDeviceName(), newStatus);
+                if (!newStatus.equals(current.getStatus())) {
+                    current.setStatus(newStatus);
+                    deviceRepository.save(current);
+                    log.info("Device {} status changed to {}", current.getDeviceName(), newStatus);
                 }
 
                 if (reachable)
@@ -52,9 +59,18 @@ public class NetworkMonitorService {
                 else
                     offline++;
 
+            } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+                log.debug("NetworkMonitor: skipped stale device row {}", device.getId());
+                offline++;
             } catch (Exception e) {
-                device.setStatus("OFFLINE");
-                deviceRepository.save(device);
+                try {
+                    deviceRepository.findById(device.getId()).ifPresent(d -> {
+                        d.setStatus("OFFLINE");
+                        deviceRepository.save(d);
+                    });
+                } catch (org.springframework.orm.ObjectOptimisticLockingFailureException ignored) {
+                    log.debug("NetworkMonitor: concurrent update while marking OFFLINE for {}", device.getId());
+                }
                 offline++;
             }
         }

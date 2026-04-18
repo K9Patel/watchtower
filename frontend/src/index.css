@@ -70,23 +70,42 @@ button {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 }
 
-/* Animations */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+/* Animation styles */
+
+/* Live Network Discovery keyframes */
+@keyframes scanSweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
 }
 
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+@keyframes radarPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50%       { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes newPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.6), 0 0 8px rgba(99, 102, 241, 0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0), 0 0 16px rgba(99, 102, 241, 0); }
 }
 
-.fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+@keyframes progressIndeterminate {
+  0%   { transform: translateX(-200%); }
+  100% { transform: translateX(400%); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Loading screen */
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
 }
 
 /* Scrollbar styling */

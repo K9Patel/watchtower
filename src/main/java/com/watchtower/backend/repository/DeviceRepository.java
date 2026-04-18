@@ -15,33 +15,50 @@ import java.util.Optional;
 @Repository
 public interface DeviceRepository extends JpaRepository<Device, Long> {
 
-    // SimulatorService / RealDataService: loops all active devices every 10s
+    // ── Existing queries (unchanged) ─────────────────────────────────────────
+
+    /** Dashboard table & Overview page */
     List<Device> findByIsActiveTrue();
 
-    // Removed findByDeviceType
-    // RealDataService: find or create "My Laptop" device
+    /** RealDataService: find-or-create "My Laptop" entry */
     Optional<Device> findByDeviceName(String deviceName);
 
-    // NetworkMonitorService: look up device by IP for ping
+    /** NetworkMonitorService: look up device by IP */
     Optional<Device> findByIpAddress(String ipAddress);
 
-    // NetworkDiscoveryService: look up device by MAC address to avoid duplicates
+    /** Find all devices with a given IP address (for DHCP IP reassignment cleanup) */
+    List<Device> findAllByIpAddress(String ipAddress);
+
+    // ── V5: auto-discovery queries ───────────────────────────────────────────
+
+    /**
+     * Primary discovery lookup — MAC address is the stable identifier
+     * for a physical device even when its IP changes via DHCP.
+     */
     Optional<Device> findByMacAddress(String macAddress);
 
-    // Find all devices NOT seen since a given time — used to mark them OFFLINE
-    // after a scan completes (they weren't in the ARP table → they left the network)
-    List<Device> findByLastSeenAtBefore(LocalDateTime cutoff);
+    /**
+     * Stale device cleanup — returns auto-discovered devices that were NOT
+     * seen in the ARP table within the last `cutoff` duration.
+     * These are deleted before each scan to keep the table as a live snapshot.
+     */
+    List<Device> findByIsAutoDiscoveredTrueAndLastSeenAtBefore(LocalDateTime cutoff);
 
-    // Bulk-mark all devices OFFLINE on startup so the scan rebuilds truth from zero
+    /**
+     * Returns all auto-discovered devices (for network change detection).
+     * When the network changes, all auto-discovered devices are deleted.
+     */
+    List<Device> findByIsAutoDiscoveredTrue();
+
+    /** Bulk-mark all non-manual devices OFFLINE at startup */
     @Modifying
     @Transactional
-    @Query("UPDATE Device d SET d.status = 'OFFLINE' WHERE d.deviceName != 'My Laptop'")
-    void markAllOffline();
+    @Query("UPDATE Device d SET d.status = 'OFFLINE' WHERE d.isAutoDiscovered = true")
+    void markAllAutoDiscoveredOffline();
 
-    // Delete devices that have been OFFLINE for longer than a given time
-    // (they have permanently left the network — e.g. different WiFi network)
+    /** Hard-delete stale auto-discovered devices (left the network) */
     @Modifying
     @Transactional
-    @Query("DELETE FROM Device d WHERE d.status = 'OFFLINE' AND d.lastSeenAt < :cutoff AND d.deviceName != 'My Laptop'")
-    void deleteStaleOfflineDevices(@Param("cutoff") LocalDateTime cutoff);
+    @Query("DELETE FROM Device d WHERE d.isAutoDiscovered = true AND d.lastSeenAt < :cutoff")
+    int deleteStaleAutoDiscovered(@Param("cutoff") LocalDateTime cutoff);
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
@@ -23,6 +24,9 @@ public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
 
     // Z-Score anomaly detection: last 100 readings per device
     List<UsageLog> findTop100ByDeviceOrderByTimestampDesc(Device device);
+
+       // Feature 2: latest 10-second snapshot row for one device
+       Optional<UsageLog> findTopByDeviceOrderByTimestampDesc(Device device);
 
     // StatsController: paginated history feed
     Page<UsageLog> findAllByOrderByTimestampDesc(Pageable pageable);

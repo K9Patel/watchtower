@@ -48,7 +48,6 @@ public class DiagnosisClient {
             System.out.println("=== RMI DiagnosisClient Demo ===");
             System.out.printf("Total Network Load : %.2f%%%n", remote.getTotalLoad());
             System.out.printf("Unresolved Alerts  : %d%n",     remote.getUnresolvedAlertCount());
-            System.out.printf("Simulator Running  : %b%n",     remote.isSimulatorRunning());
 
             System.out.println("--- Last Diagnosis Report ---");
             List<Map<String, String>> report = remote.getLastDiagnosisReport();

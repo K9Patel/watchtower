@@ -21,7 +21,4 @@ public interface DiagnosisRemote extends Remote {
 
     /** Returns last diagnosis result as key→value pairs. */
     List<Map<String, String>> getLastDiagnosisReport() throws RemoteException;
-
-    /** Returns true if the simulator is currently running. */
-    boolean isSimulatorRunning() throws RemoteException;
 }

@@ -11,7 +11,6 @@ export const SettingsProvider = ({ children }) => {
     highAlerts: true,
     mediumAlerts: false,
     dataRetention: 30,
-    simulatorMode: false,
   });
 
   // Load from localStorage if available

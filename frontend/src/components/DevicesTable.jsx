@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { ShieldAlert, Server, Trash2, Power } from 'lucide-react';
+import { Server, Trash2, Power, Wifi, WifiOff } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
+
+// Removed vendor emoji and color mapping per user request
 
 const DevicesTable = ({ devices, clusters, onRefresh }) => {
   const [filter, setFilter] = useState('ALL');
@@ -36,24 +38,30 @@ const DevicesTable = ({ devices, clusters, onRefresh }) => {
     }
   };
 
-  // Filter out deactivated devices
+  // Filter options: ALL, ONLINE, OFFLINE, AUTO
   const activeDevices = devices.filter(d => d.isActive);
-  const displayDevices = filter === 'ALL' ? activeDevices : activeDevices.filter(d => d.deviceType === filter);
+  const displayDevices = filter === 'ALL'     ? activeDevices
+    : filter === 'ONLINE'  ? activeDevices.filter(d => d.status === 'ONLINE')
+    : filter === 'OFFLINE' ? activeDevices.filter(d => d.status !== 'ONLINE')
+    : filter === 'AUTO'    ? activeDevices.filter(d => d.isAutoDiscovered)
+    : activeDevices;
 
   return (
     <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Server size={20} color="var(--accent-color)" /> Fleet Management ({activeDevices.length})
+          <Server size={20} color="var(--accent-color)" />
+          Discovered Devices ({activeDevices.length})
         </h3>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {['ALL', 'STUDENT', 'STAFF', 'ADMIN'].map(f => (
+          {['ALL', 'ONLINE', 'OFFLINE', 'AUTO'].map(f => (
             <button key={f}
               onClick={() => setFilter(f)}
               style={{
                 background: filter === f ? 'var(--accent-color)' : 'rgba(51, 65, 85, 0.4)',
                 color: filter === f ? 'white' : 'var(--text-secondary)',
-                border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600
+                border: 'none', padding: '6px 12px', borderRadius: '6px',
+                fontSize: '11px', fontWeight: 600, cursor: 'pointer',
               }}>
               {f}
             </button>
@@ -66,8 +74,9 @@ const DevicesTable = ({ devices, clusters, onRefresh }) => {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--panel-border)', color: 'var(--text-secondary)' }}>
               <th style={{ padding: '12px 8px' }}>Device</th>
-              <th style={{ padding: '12px 8px' }}>Type</th>
-              <th style={{ padding: '12px 8px' }}>IP / MAC</th>
+              <th style={{ padding: '12px 8px' }}>Vendor</th>
+              <th style={{ padding: '12px 8px' }}>IP Address</th>
+              <th style={{ padding: '12px 8px' }}>MAC Address</th>
               <th style={{ padding: '12px 8px' }}>K-Means Cluster</th>
               <th style={{ padding: '12px 8px', textAlign: 'center' }}>Status</th>
               <th style={{ padding: '12px 8px', textAlign: 'right' }}>Actions</th>
@@ -75,49 +84,75 @@ const DevicesTable = ({ devices, clusters, onRefresh }) => {
           </thead>
           <tbody>
             {displayDevices.map(d => {
-              const cluster = clusters[d.id] || 'N/A';
-              const cStyle = getClusterStyles(cluster);
-              
+              const cluster = clusters?.[d.id] || 'N/A';
+              const cStyle  = getClusterStyles(cluster);
               return (
-                <tr key={d.id} style={{ borderBottom: '1px solid rgba(51, 65, 85, 0.3)' }}>
-                  <td style={{ padding: '12px 8px', fontWeight: 600 }}>{d.deviceName}</td>
-                  <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{d.deviceType}</td>
-                  <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontSize: '12px' }}>
-                    {d.ipAddress} <br /> 
-                    <span style={{ color: 'var(--text-secondary)' }}>{d.macAddress}</span>
+                <tr key={d.id} style={{ borderBottom: '1px solid rgba(51, 65, 85, 0.3)', position: 'relative' }}>
+                  <td style={{ padding: '12px 8px', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {d.isAutoDiscovered && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: 700,
+                          background: 'rgba(99,102,241,0.15)',
+                          color: '#818cf8', padding: '2px 6px', borderRadius: '10px',
+                          letterSpacing: '0.06em', flexShrink: 0,
+                        }}>📡</span>
+                      )}
+                      {d.deviceName}
+                    </div>
                   </td>
                   <td style={{ padding: '12px 8px' }}>
-                    <span style={{ 
-                      background: cStyle.bg, color: cStyle.color, padding: '4px 8px', 
-                      borderRadius: '4px', fontSize: '11px', fontWeight: 600 
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={d.vendorName}>
+                      {d.vendorName || 'Unknown'}
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontSize: '12px' }}>
+                    {d.ipAddress}
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <span
+                      style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'default' }}
+                      title={`Full MAC: ${d.macAddress || 'N/A'}`}
+                    >
+                      {d.macAddress || '—'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <span style={{
+                      background: cStyle.bg, color: cStyle.color,
+                      padding: '4px 8px', borderRadius: '4px',
+                      fontSize: '11px', fontWeight: 600,
                     }}>
                       {cluster.replace('_', ' ')}
                     </span>
                   </td>
                   <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                    <span style={{ 
+                    <span style={{
                       display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%',
-                      background: getStatusColor(d.status), boxShadow: `0 0 8px ${getStatusColor(d.status)}`
-                    }}></span>
+                      background: getStatusColor(d.status),
+                      boxShadow: `0 0 8px ${getStatusColor(d.status)}`,
+                    }} />
                   </td>
                   <td style={{ padding: '12px 8px', textAlign: 'right' }}>
-                    <button onClick={() => toggleStatus(d.id, d.status)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', marginRight: '12px' }}>
+                    <button onClick={() => toggleStatus(d.id, d.status)}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', marginRight: '12px', cursor: 'pointer' }}>
                       <Power size={16} />
                     </button>
-                    <button onClick={() => deleteDevice(d.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444' }}>
+                    <button onClick={() => deleteDevice(d.id)}
+                      style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
                       <Trash2 size={16} />
                     </button>
                   </td>
                 </tr>
               );
             })}
-            
+
             {displayDevices.length === 0 && (
-               <tr>
-                 <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
-                   No devices found matching this filter.
-                 </td>
-               </tr>
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
+                  No devices found for this filter.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

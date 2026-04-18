@@ -6,7 +6,6 @@ import com.watchtower.backend.repository.DeviceRepository;
 import com.watchtower.backend.repository.UsageLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -20,12 +19,15 @@ import java.util.List;
 
 @Slf4j
 @Service
-@Profile("real")    // AJT: only loads when spring.profiles.active=real
 @RequiredArgsConstructor
 public class RealDataService {
 
     private final DeviceRepository deviceRepository;
     private final UsageLogRepository usageLogRepository;
+    private final AnalysisService analysisService;
+    private final DashboardWebSocketService webSocketService;
+    private final MacVendorService macVendorService;
+    private final PacketCaptureService packetCaptureService;
 
     // tracks previous reading so we can calculate delta bytes
     private long lastBytesIn  = 0;
@@ -54,7 +56,7 @@ public class RealDataService {
         }
     }
 
-    // AJT Unit 2 — Multithreading: same @Scheduled pattern as SimulatorService
+    // AJT Unit 2 — Multithreading: background scheduled task pattern
     // AJT Unit 3 — Java Networking: reads real bytes from this machine's NIC
     @Scheduled(fixedRate = 10000)
     public void collectRealData() {
@@ -86,18 +88,32 @@ public class RealDataService {
             // find or create "My Laptop" device for this machine's own traffic
             Device myDevice = deviceRepository.findByDeviceName("My Laptop")
                 .map(d -> {
-                    // Update MAC address if it was REAL-NIC
+                    // Update MAC address if it was REAL-NIC or missing
                     if ("REAL-NIC".equals(d.getMacAddress()) || d.getMacAddress() == null) {
                         d.setMacAddress(actualMac);
-                        deviceRepository.save(d);
                     }
+                    // Populate vendor name if missing
+                    if (d.getVendorName() == null || "Unknown".equals(d.getVendorName())) {
+                        String vendor = macVendorService.lookup(actualMac);
+                        if (!"Unknown".equals(vendor)) {
+                            d.setVendorName(vendor);
+                        }
+                    }
+                    d.setIpAddress(localIp);
+                    d.setStatus("ONLINE");
+                    d.setLastSeenAt(LocalDateTime.now());
+                    deviceRepository.save(d);
                     return d;
                 })
-                .orElseGet(() -> deviceRepository.save(Device.builder()
-                    .deviceName("My Laptop")
-                    .ipAddress(localIp)
-                    .macAddress(actualMac)
-                    .build()));
+                .orElseGet(() -> {
+                    String vendor = macVendorService.lookup(actualMac);
+                    return deviceRepository.save(Device.builder()
+                        .deviceName("My Laptop")
+                        .ipAddress(localIp)
+                        .macAddress(actualMac)
+                        .vendorName("Unknown".equals(vendor) ? null : vendor)
+                        .build());
+                });
 
             usageLogRepository.save(UsageLog.builder()
                 .device(myDevice)
@@ -112,6 +128,9 @@ public class RealDataService {
 
             // Also ping all discovered devices and record basic usage logs
             recordDiscoveredDeviceActivity();
+
+            // Push real-time update to React frontend
+            webSocketService.pushDashboardUpdate(analysisService.getFullSummary());
 
         } catch (Exception e) {
             log.error("RealDataService error: {}", e.getMessage());
@@ -129,6 +148,7 @@ public class RealDataService {
      */
     private void recordDiscoveredDeviceActivity() {
         List<Device> allDevices = deviceRepository.findByIsActiveTrue();
+        LocalDateTime now = LocalDateTime.now();
 
         for (Device device : allDevices) {
             // skip "My Laptop" — already recorded above with real byte counts
@@ -143,28 +163,45 @@ public class RealDataService {
 
                 // Update device status based on ping result
                 String newStatus = reachable ? "ONLINE" : "OFFLINE";
+                if (reachable) {
+                    device.setLastSeenAt(now);
+                }
                 if (!newStatus.equals(device.getStatus())) {
                     device.setStatus(newStatus);
                     deviceRepository.save(device);
+                } else if (reachable) {
+                    // Persist last_seen_at refresh even when status does not change.
+                    deviceRepository.save(device);
                 }
 
-                if (reachable) {
-                    // Record a usage log entry — use latency as a proxy metric
-                    // Low latency = idle, high latency = potentially under load
-                    double estimatedMB = Math.max(0.01, latencyMs * 0.005); // rough heuristic
-                    double estimatedPct = Math.min((estimatedMB / 100.0) * 100, 100.0);
-
-                    usageLogRepository.save(UsageLog.builder()
-                        .device(device)
-                        .bytesUsed(estimatedMB)
-                        .bandwidthPercentage(estimatedPct)
-                        .trafficType("REAL_TRAFFIC")
-                        .timestamp(LocalDateTime.now())
-                        .build());
+                // Prefer true packet-capture bytes when available; otherwise fallback estimator.
+                double measuredMB;
+                if (packetCaptureService.isCaptureAvailable()) {
+                    measuredMB = packetCaptureService.consumeMegabytesForIp(device.getIpAddress());
+                } else {
+                    measuredMB = reachable ? Math.max(0.01, latencyMs * 0.005) : 0.0;
                 }
+                double measuredPct = Math.min((measuredMB / 100.0) * 100, 100.0);
+
+                usageLogRepository.save(UsageLog.builder()
+                    .device(device)
+                    .bytesUsed(measuredMB)
+                    .bandwidthPercentage(measuredPct)
+                    .trafficType("REAL_TRAFFIC")
+                    .timestamp(now)
+                    .build());
 
             } catch (Exception e) {
                 log.debug("RealDataService: couldn't ping {} — {}", device.getDeviceName(), e.getMessage());
+
+                // Keep 10-second cadence even on ping failure.
+                usageLogRepository.save(UsageLog.builder()
+                    .device(device)
+                    .bytesUsed(0.0)
+                    .bandwidthPercentage(0.0)
+                    .trafficType("REAL_TRAFFIC")
+                    .timestamp(now)
+                    .build());
             }
         }
     }

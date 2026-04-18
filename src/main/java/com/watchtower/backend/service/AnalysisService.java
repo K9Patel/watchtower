@@ -22,6 +22,8 @@ import java.net.InetSocketAddress;
 @RequiredArgsConstructor
 public class AnalysisService {
 
+        private static final int SNAPSHOT_SECONDS = 10;
+
     private final UsageLogRepository usageLogRepository;
     private final DeviceRepository deviceRepository;
     private final Environment environment;
@@ -31,7 +33,7 @@ public class AnalysisService {
     // Reads last 60s of logs, calculates total network load %
     public double getTotalLoad() {
         List<UsageLog> recent = usageLogRepository
-                .findByTimestampAfter(LocalDateTime.now().minusSeconds(60));
+                                .findByTimestampAfter(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS));
 
         if (recent.isEmpty())
             return 0.0;
@@ -48,7 +50,7 @@ public class AnalysisService {
     @Transactional(readOnly = true)
     public Optional<Device> getTopConsumer() {
         List<UsageLog> recent = usageLogRepository
-                .findByTimestampAfter(LocalDateTime.now().minusSeconds(60));
+                                .findByTimestampAfter(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS));
 
         if (recent.isEmpty())
             return Optional.empty();
@@ -68,7 +70,7 @@ public class AnalysisService {
     // Returns: {"STREAMING": 8, "BROWSING": 12, "GAMING": 3, ...}
     public Map<String, Long> getTrafficBreakdown() {
         List<UsageLog> recent = usageLogRepository
-                .findByTimestampAfter(LocalDateTime.now().minusSeconds(60));
+                                .findByTimestampAfter(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS));
 
         return recent.stream()
                 .collect(Collectors.groupingBy(
@@ -81,7 +83,7 @@ public class AnalysisService {
     @Transactional(readOnly = true)
     public Map<String, Double> getBandwidthSharePerDevice() {
         List<UsageLog> recent = usageLogRepository
-                .findByTimestampAfter(LocalDateTime.now().minusSeconds(60));
+                                .findByTimestampAfter(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS));
 
         if (recent.isEmpty())
             return Collections.emptyMap();

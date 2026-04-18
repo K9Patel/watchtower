@@ -55,6 +55,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public: API routes used by Vite dashboard (separate origin)
                 .requestMatchers("/api/**").permitAll()
+                // Public: WebSocket endpoint (SockJS uses HTTP for handshake)
+                .requestMatchers("/ws/**").permitAll()
                 // Public: static assets + login page
                 .requestMatchers("/", "/login", "/css/**", "/js/**",
                                  "/static/**", "/favicon.ico").permitAll()
@@ -74,7 +76,7 @@ public class SecurityConfig {
             )
             // Disable CSRF for API routes (React/Vite sends JSON without CSRF tokens)
             .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/**")
+                .ignoringRequestMatchers("/api/**", "/ws/**")
             );
 
         return http.build();

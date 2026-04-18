@@ -2,7 +2,6 @@ package com.watchtower.backend.rmi;
 
 import com.watchtower.backend.repository.AlertRepository;
 import com.watchtower.backend.service.AnalysisService;
-import com.watchtower.backend.service.SimulationControlService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +33,6 @@ public class DiagnosisServer extends UnicastRemoteObject implements DiagnosisRem
     // Injected via setter from ApplicationContext after construction
     private AnalysisService          analysisService;
     private AlertRepository          alertRepository;
-    private SimulationControlService controlService;
 
     private final ApplicationContext applicationContext;
     private Registry registry;
@@ -50,7 +48,6 @@ public class DiagnosisServer extends UnicastRemoteObject implements DiagnosisRem
         // Resolve beans after construction to avoid circular dependency issues
         this.analysisService = applicationContext.getBean(AnalysisService.class);
         this.alertRepository = applicationContext.getBean(AlertRepository.class);
-        this.controlService  = applicationContext.getBean(SimulationControlService.class);
 
         try {
             registry = LocateRegistry.createRegistry(1099);
@@ -100,10 +97,5 @@ public class DiagnosisServer extends UnicastRemoteObject implements DiagnosisRem
                         "message",  alert.getMessage()
                 )));
         return report;
-    }
-
-    @Override
-    public boolean isSimulatorRunning() throws RemoteException {
-        return controlService.isRunning();
     }
 }

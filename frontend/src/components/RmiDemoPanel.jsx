@@ -36,7 +36,6 @@ const RmiDemoPanel = () => {
           <button onClick={() => invokeRmi('load', 'Query Global Network Load')} className="rmi-btn">Query Global Network Load</button>
           <button onClick={() => invokeRmi('alerts', 'Fetch Unresolved Global Alerts')} className="rmi-btn">Fetch Unresolved Global Alerts</button>
           <button onClick={() => invokeRmi('report', 'Retrieve Node Diagnosis Ledger')} className="rmi-btn">Retrieve Node Diagnosis Ledger</button>
-          <button onClick={() => invokeRmi('simulator', 'Check Node Operating Mode')} className="rmi-btn">Check Node Operating Mode</button>
         </div>
 
         <div style={{ 

@@ -33,6 +33,13 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
+		<!-- WebSocket — STOMP over SockJS, real-time push to React frontend -->
+		<!-- AJT: Unit 3 Java Networking — persistent bidirectional socket    -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+
 		<!-- Spring Data JPA + Hibernate — @Entity, @ManyToOne, JPQL    -->
 		<!-- AJT: Unit 4 JDBC + Unit 8 ORM / Hibernate                  -->
 		<dependency>
@@ -155,6 +162,18 @@
 			<groupId>com.itextpdf</groupId>
 			<artifactId>itextpdf</artifactId>
 			<version>5.5.13.3</version>
+		</dependency>
+
+		<!-- Packet capture (true per-device traffic accounting where supported) -->
+		<dependency>
+			<groupId>org.pcap4j</groupId>
+			<artifactId>pcap4j-core</artifactId>
+			<version>1.8.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pcap4j</groupId>
+			<artifactId>pcap4j-packetfactory-static</artifactId>
+			<version>1.8.2</version>
 		</dependency>
 
 

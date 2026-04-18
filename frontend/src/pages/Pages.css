@@ -111,16 +111,18 @@
 
 .devices-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 24px;
   margin-bottom: 32px;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
 }
 
 .device-card {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
-  padding: 20px;
+  padding: 22px;
   transition: all 0.3s ease;
 }
 
@@ -134,7 +136,7 @@
 .device-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 16px;
 }
 
@@ -142,6 +144,9 @@
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-badge {
@@ -150,6 +155,9 @@
   padding: 4px 8px;
   border-radius: 4px;
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 10px;
+  margin-top: 2px;
 }
 
 .status-badge.active {
@@ -173,6 +181,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 13px;
+  gap: 12px;
 }
 
 .detail-label {
@@ -1065,6 +1074,18 @@
   .header-stats {
     flex-direction: column;
     width: 100%;
+  }
+}
+
+@media (max-width: 1200px) {
+  .devices-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .devices-grid {
+    grid-template-columns: 1fr;
   }
 }
 

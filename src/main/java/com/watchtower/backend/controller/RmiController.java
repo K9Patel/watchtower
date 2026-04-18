@@ -59,19 +59,6 @@ public class RmiController {
         }
     }
 
-    @GetMapping("/simulator")
-    public ResponseEntity<Map<String, Object>> isSimulatorRunning() {
-        DiagnosisRemote remote = getRemote();
-        if (remote == null) return rmiUnavailable();
-        try {
-            return ResponseEntity.ok(Map.of(
-                    "running", remote.isSimulatorRunning(), "source", "RMI"));
-        } catch (RemoteException e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "RMI call failed: " + e.getMessage()));
-        }
-    }
-
     private ResponseEntity<Map<String, Object>> rmiUnavailable() {
         return ResponseEntity.status(503)
                 .body(Map.of("error", "RMI server not reachable on localhost:1099"));

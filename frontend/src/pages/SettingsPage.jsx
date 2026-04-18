@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Lock, Palette, Database, Power, Save } from 'lucide-react';
+import { Bell, Lock, Palette, Database, Save } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import './Pages.css';
 
@@ -170,39 +170,6 @@ const SettingsPage = () => {
               </div>
             </>
           )}
-        </div>
-      </div>
-
-      {/* Simulator & Development */}
-      <div className="settings-section">
-        <div className="section-header">
-          <Power size={20} />
-          <h2>Simulator & Development</h2>
-        </div>
-
-        <div className="glass-panel settings-panel">
-          <div className="setting-item">
-            <div className="setting-label">
-              <span className="label-title">Simulator Mode</span>
-              <span className="label-description">Use simulated data instead of real network</span>
-            </div>
-            <div className="setting-control">
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={settings.simulatorMode}
-                  onChange={(e) => handleChange('simulatorMode', e.target.checked)}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          <div className="setting-item warning">
-            <span className="warning-text">
-              ⚠️ Enable only for testing. Simulated data may not reflect real network conditions.
-            </span>
-          </div>
         </div>
       </div>
 

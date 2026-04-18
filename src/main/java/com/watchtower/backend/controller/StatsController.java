@@ -1,7 +1,6 @@
 package com.watchtower.backend.controller;
 
 import com.watchtower.backend.service.AnalysisService;
-import com.watchtower.backend.service.SimulationControlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +15,6 @@ import java.util.Map;
 public class StatsController {
 
     private final AnalysisService analysisService;
-    private final SimulationControlService controlService;
     private final Environment environment;
 
     // GET /api/stats/summary — main dashboard card data
@@ -25,13 +23,9 @@ public class StatsController {
     @GetMapping("/summary")
     public Map<String, Object> getSummary() {
         Map<String, Object> summary = analysisService.getFullSummary();
-        // Enrich with live simulator/real mode badge
         String activeProfile = Arrays.stream(environment.getActiveProfiles())
-                .findFirst().orElse("default");
+                .findFirst().orElse("real");
         summary.put("activeProfile", activeProfile);
-        // In real mode, show LIVE_NETWORK; in simulator mode, show RUNNING/PAUSED
-        summary.put("simulatorStatus",
-                activeProfile.equalsIgnoreCase("real") ? "LIVE_NETWORK" : controlService.getStatus());
         return summary;
     }
 
@@ -53,15 +47,12 @@ public class StatsController {
         return Map.of("totalLoadPercent", analysisService.getTotalLoad());
     }
 
-    // GET /api/stats/mode — active profile badge: SIMULATOR or REAL
+    // GET /api/stats/mode — active profile badge: always LIVE (real network monitoring)
     @GetMapping("/mode")
     public Map<String, String> getMode() {
-        String profile = Arrays.stream(environment.getActiveProfiles())
-                .findFirst().orElse("simulator");
         return Map.of(
-                "profile", profile,
-                "label",   profile.equalsIgnoreCase("real") ? "🟢 LIVE" : "🔵 SIMULATOR",
-                "simulatorStatus", controlService.getStatus()
+                "profile", "real",
+                "label",   "🟢 LIVE"
         );
     }
 }
