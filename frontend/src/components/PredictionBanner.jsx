@@ -10,9 +10,7 @@ const PredictionBanner = ({ trend }) => {
   const getStyle = () => {
     if (!hasEnoughData) {
       return {
-        color: 'var(--color-info)',
-        bg: 'rgba(59, 130, 246, 0.1)',
-        border: 'rgba(59, 130, 246, 0.3)',
+        color: '#b8c0ce',
         icon: <Minus size={18} />,
       };
     }
@@ -20,12 +18,12 @@ const PredictionBanner = ({ trend }) => {
     switch (trend.trendLabel) {
       case 'RISING_FAST': 
       case 'RISING':
-        return { color: 'var(--color-high)', bg: 'rgba(249, 115, 22, 0.1)', border: 'rgba(249, 115, 22, 0.3)', icon: <TrendingUp size={18} /> };
+        return { color: '#e4c177', icon: <TrendingUp size={18} /> };
       case 'FALLING_FAST':
       case 'FALLING':
-        return { color: 'var(--color-low)', bg: 'rgba(34, 197, 94, 0.1)', border: 'rgba(34, 197, 94, 0.3)', icon: <TrendingDown size={18} /> };
+        return { color: '#e4c177', icon: <TrendingDown size={18} /> };
       default:
-        return { color: 'var(--color-info)', bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.3)', icon: <Minus size={18} /> };
+        return { color: '#b8c0ce', icon: <Minus size={18} /> };
     }
   };
 
@@ -36,11 +34,11 @@ const PredictionBanner = ({ trend }) => {
 
   return (
     <div className="prediction-banner" style={{ 
-      background: style.bg, border: `1px solid ${style.border}`, borderRadius: '12px', 
+      borderRadius: '12px', 
       padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' 
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ color: style.color, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 1 }}>
+        <div style={{ color: style.color, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255, 255, 255, 0.05)', padding: '8px', borderRadius: '8px' }}>
           {style.icon}
         </div>
         <div>

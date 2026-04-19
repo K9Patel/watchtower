@@ -41,7 +41,7 @@ const AlertsPanel = ({ alerts, onRefresh }) => {
   return (
     <>
       {/* Alerts Feed */}
-      <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', maxHeight: '450px' }}>
+      <div className="glass-panel" style={{ width: '100%', maxWidth: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: '320px', overflowX: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <ShieldAlert size={18} color="#ef4444" /> Active Alerts ({alerts.length})
@@ -58,68 +58,81 @@ const AlertsPanel = ({ alerts, onRefresh }) => {
           )}
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '8px' }}>
+        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
           {alerts.map(a => {
             const style = getSeverityStyles(a.severity);
             return (
-              <div key={a.id} style={{ 
-                background: style.bg, border: `1px solid ${style.border}`, borderRadius: '10px', 
-                padding: '16px', animation: 'fadeIn 0.3s ease' 
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: style.color, fontWeight: 700, fontSize: '13px' }}>
-                    {style.icon} {a.alertType}
+              <div key={a.id} className="rotating-border-card" style={{ marginBottom: '12px', width: '100%', minWidth: 0, maxWidth: '100%' }}>
+                <div className="rotating-border-content" style={{
+                  background: style.bg, padding: '16px', display: 'flex', flexDirection: 'column', overflowX: 'hidden'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: style.color, fontWeight: 700, fontSize: '13px' }}>
+                      {style.icon} {a.alertType}
+                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); resolveAlert(a.id); }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', zIndex: 10 }}>
+                      <CheckCircle size={18} />
+                    </button>
                   </div>
-                  <button onClick={() => resolveAlert(a.id)} style={{ background: 'transparent', border: 'none', color: '#94a3b8' }}>
-                    <CheckCircle size={18} />
-                  </button>
-                </div>
-                <p style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>{a.message}</p>
-                <div style={{ marginTop: '12px', fontSize: '11px', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Device: {a.device?.deviceName || `#${a.device?.id || 'N/A'}`}</span>
-                  <span>{new Date(a.createdAt).toLocaleTimeString()}</span>
+                  <p style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5, position: 'relative', zIndex: 2, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{a.message}</p>
+                  <div style={{ marginTop: '12px', fontSize: '11px', color: '#64748b', display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
+                    <span>Device: {a.device?.deviceName || `#${a.device?.id || 'N/A'}`}</span>
+                    <span>{new Date(a.createdAt).toLocaleTimeString()}</span>
+                  </div>
                 </div>
               </div>
             );
           })}
           
           {alerts.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-              <CheckCircle size={40} style={{ marginBottom: '16px', opacity: 0.5 }} />
-              <p>No active alerts. Network is functioning nominally.</p>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px 16px', color: '#64748b' }}>
+                        <div>
+                          <CheckCircle size={40} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                          <p>No active alerts. Network is functioning nominally.</p>
+                        </div>
             </div>
           )}
         </div>
       </div>
 
       {/* Recommendations Engine (Rule Map) */}
-      <div className="glass-panel" style={{ maxHeight: '350px', display: 'flex', flexDirection: 'column' }}>
-        <h3 style={{ fontSize: '16px', marginBottom: '20px', color: '#a5b4fc' }}>AI Remediation Advice</h3>
-        <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="glass-panel" style={{ width: '100%', maxWidth: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: '220px', overflowX: 'hidden' }}>
+                  <h3 style={{ fontSize: '16px', marginBottom: '16px', color: '#c7ab80' }}>AI Remediation Advice</h3>
+                  <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
           {recommendations.map((rec, i) => (
-            <div key={i} style={{ padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', borderLeft: `3px solid ${getSeverityStyles(rec.severity).color}` }}>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{rec.alertType} • {rec.severity}</span>
-                {rec.device && <span>{rec.device}</span>}
+                      <div key={i} className="rotating-border-card" style={{ marginBottom: '12px', width: '100%', minWidth: 0, maxWidth: '100%' }}>
+                        <div className="rotating-border-content" style={{ padding: '12px', background: 'rgba(16, 18, 20, 0.95)' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: getSeverityStyles(rec.severity).color }}></div>
+                    <span>{rec.alertType} • {rec.severity}</span>
+                  </div>
+                  {rec.device && <span>{rec.device}</span>}
+                </div>
+                <div style={{ marginBottom: '8px', position: 'relative', zIndex: 2 }}>
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    color: rec.source === 'AI' ? '#7dd3fc' : '#cbd5e1',
+                    background: rec.source === 'AI' ? 'rgba(14, 116, 144, 0.25)' : 'rgba(71, 85, 105, 0.35)',
+                    border: rec.source === 'AI' ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(148, 163, 184, 0.25)',
+                    borderRadius: '999px',
+                    padding: '2px 8px',
+                    textTransform: 'uppercase'
+                  }}>
+                    {rec.source === 'AI' ? 'AI Generated' : 'Rule Fallback'}
+                  </span>
+                </div>
+                <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.4, margin: 0, position: 'relative', zIndex: 2, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{rec.advice}</p>
               </div>
-              <div style={{ marginBottom: '6px' }}>
-                <span style={{
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  color: rec.source === 'AI' ? '#7dd3fc' : '#cbd5e1',
-                  background: rec.source === 'AI' ? 'rgba(14, 116, 144, 0.25)' : 'rgba(71, 85, 105, 0.35)',
-                  border: rec.source === 'AI' ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(148, 163, 184, 0.25)',
-                  borderRadius: '999px',
-                  padding: '2px 8px',
-                  textTransform: 'uppercase'
-                }}>
-                  {rec.source === 'AI' ? 'AI Generated' : 'Rule Fallback'}
-                </span>
-              </div>
-              <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.4 }}>{rec.advice}</p>
             </div>
           ))}
+          {recommendations.length === 0 && (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#6b7280', padding: '18px 12px' }}>
+              <p>No remediation recommendations at this time.</p>
+            </div>
+          )}
         </div>
       </div>
     </>

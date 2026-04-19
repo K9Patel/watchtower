@@ -115,7 +115,7 @@ const AttackPathGraph = () => {
           <ForceGraph2D
             ref={graphRef}
             graphData={forceData}
-            backgroundColor="rgba(2, 6, 23, 0.92)"
+            backgroundColor="rgba(7, 9, 12, 0.96)"
             width={graphWidth}
             height={420}
             cooldownTicks={100}
@@ -126,8 +126,9 @@ const AttackPathGraph = () => {
             linkLineDash={(link) => (link.dashed ? [5, 4] : null)}
             nodeRelSize={1}
             nodeCanvasObject={(node, ctx, globalScale) => {
-              const label = node.label || node.ip || String(node.id);
-              const fontSize = Math.max(9, 12 / globalScale);
+              const rawLabel = node.label || node.ip || String(node.id);
+              const label = String(rawLabel).length > 16 ? `${String(rawLabel).slice(0, 16)}...` : rawLabel;
+              const fontSize = Math.min(16, Math.max(9, 12 / globalScale));
               const pulse = node.riskLevel === 'CRITICAL'
                 ? 1 + Math.abs(Math.sin(Date.now() / 280)) * 0.35
                 : 1;
@@ -154,7 +155,11 @@ const AttackPathGraph = () => {
               ctx.textAlign = 'center';
               ctx.textBaseline = 'top';
               ctx.fillStyle = '#e2e8f0';
-              ctx.fillText(label, node.x, node.y + radius + 4);
+              const textY = node.y + radius + 5;
+              const maxX = graphWidth - 10;
+              const minX = 10;
+              const safeX = Math.max(minX, Math.min(maxX, node.x));
+              ctx.fillText(label, safeX, textY);
             }}
             nodeLabel={(node) => {
               const score = Number(node.riskScore || 0);

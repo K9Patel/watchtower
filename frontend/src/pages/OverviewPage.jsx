@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { AlertTriangle } from 'lucide-react';
 import SummaryCards from '../components/SummaryCards';
 import DevicesTable from '../components/DevicesTable';
 import AlertsPanel from '../components/AlertsPanel';
@@ -8,6 +9,7 @@ import IncidentTimelineReplay from '../components/IncidentTimelineReplay';
 import { useSettings } from '../context/SettingsContext';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { API_BASE_URL } from '../config/api';
+import LoadingSpinner from '../components/LoadingSpinner';
 import './Pages.css';
 
 const OverviewPage = () => {
@@ -135,16 +137,11 @@ const OverviewPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="spinner"></div>
-        <h2>Initializing WatchTower Core Engine...</h2>
-      </div>
-    );
+    return <LoadingSpinner text="INITIALIZING" />;
   }
 
   return (
-    <div className="page-container relative">
+    <div className="page-container glass-container relative">
       {/* Toast Alert */}
       {toastAlert && (
         <div style={{
@@ -155,13 +152,16 @@ const OverviewPage = () => {
           display: 'flex', alignItems: 'center', gap: '10px',
           animation: 'slideDown 0.3s ease-out'
         }}>
-          ⚠️ New Alert: {toastAlert.message}
+          <AlertTriangle size={16} /> New Alert: {toastAlert.message}
         </div>
       )}
 
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1>Overview</h1>
+          <h1 className="btn-amber-text" data-text="Overview" style={{ margin: 0, textTransform: 'none' }}>
+            <span className="actual-text">Overview</span>
+            <span aria-hidden="true" className="hover-text">Overview</span>
+          </h1>
           <p className="page-subtitle">Real-time network monitoring dashboard</p>
         </div>
 
@@ -169,13 +169,13 @@ const OverviewPage = () => {
         <div style={{
           padding: '6px 14px', borderRadius: '20px', fontWeight: 800, fontSize: '11px',
           letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '8px',
-          background: connected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-          color: connected ? '#22c55e' : '#ef4444',
-          border: `1px solid ${connected ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`
+          background: connected ? 'rgba(226,191,124,0.12)' : 'rgba(239,68,68,0.1)',
+          color: connected ? '#e2bf7c' : '#ef4444',
+          border: `1px solid ${connected ? 'rgba(226,191,124,0.34)' : 'rgba(239,68,68,0.3)'}`
         }}>
           <div style={{
             width: '8px', height: '8px', borderRadius: '50%',
-            background: connected ? '#22c55e' : '#ef4444',
+            background: connected ? '#e2bf7c' : '#ef4444',
             animation: connected ? 'newPulse 2s infinite' : 'none'
           }} />
           {connected ? 'LIVE' : 'RECONNECTING...'}

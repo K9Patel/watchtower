@@ -21,7 +21,10 @@ const SettingsPage = () => {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Settings</h1>
+          <h1 className="btn-amber-text" data-text="Settings" style={{ margin: 0, textTransform: 'none' }}>
+            <span className="actual-text">Settings</span>
+            <span aria-hidden="true" className="hover-text">Settings</span>
+          </h1>
           <p className="page-subtitle">Configure WatchTower preferences and system settings</p>
         </div>
       </div>
@@ -53,23 +56,6 @@ const SettingsPage = () => {
             </div>
           </div>
 
-          <div className="setting-item">
-            <div className="setting-label">
-              <span className="label-title">Theme</span>
-              <span className="label-description">Application appearance</span>
-            </div>
-            <div className="setting-control">
-              <select
-                value={settings.theme}
-                onChange={(e) => handleChange('theme', e.target.value)}
-                className="settings-select"
-              >
-                <option value="dark">Dark Mode</option>
-                <option value="light">Light Mode</option>
-                <option value="auto">Auto (System)</option>
-              </select>
-            </div>
-          </div>
 
           <div className="setting-item">
             <div className="setting-label">

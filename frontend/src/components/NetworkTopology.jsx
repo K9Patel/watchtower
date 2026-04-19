@@ -133,7 +133,7 @@ const NetworkTopology = () => {
             graphData={graphData}
             width={width}
             height={470}
-            backgroundColor="rgba(2, 6, 23, 0.92)"
+            backgroundColor="rgba(7, 9, 12, 0.96)"
             cooldownTicks={120}
             nodeRelSize={1}
             linkColor={(l) => l.color}
@@ -217,7 +217,7 @@ const NetworkTopology = () => {
                 attribution="&copy; OpenStreetMap contributors"
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <CircleMarker center={gatewayCoords} radius={10} pathOptions={{ color: '#0ea5e9', fillColor: '#38bdf8', fillOpacity: 0.9 }}>
+              <CircleMarker center={gatewayCoords} radius={10} pathOptions={{ color: '#d7b77f', fillColor: '#c8a56e', fillOpacity: 0.92 }}>
                 <Popup>
                   <strong>Router / Gateway</strong>
                   <br />

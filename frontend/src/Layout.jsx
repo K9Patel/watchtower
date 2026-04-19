@@ -57,14 +57,17 @@ const Layout = ({ children }) => {
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="logo">
-            <div className="logo-icon">
-              <Activity size={24} />
-            </div>
-            {sidebarOpen && (
+            {sidebarOpen ? (
               <div>
-                <h2>Watch<span className="logo-accent">Tower</span></h2>
-                <p className="logo-subtitle">Network Control</p>
+                <h2 style={{ color: 'white', fontWeight: 800, fontSize: '28px', letterSpacing: '1px', margin: 0 }}>
+                  WatchTower
+                </h2>
+                <p className="logo-subtitle" style={{ margin: 0, marginTop: '4px', paddingLeft: '2px' }}>Network Control</p>
               </div>
+            ) : (
+              <h2 style={{ color: 'white', fontWeight: 800, fontSize: '24px', margin: 0, textAlign: 'center', width: '100%' }}>
+                W
+              </h2>
             )}
           </div>
           <button 
@@ -76,42 +79,50 @@ const Layout = ({ children }) => {
         </div>
 
         <nav className="sidebar-nav">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-                title={!sidebarOpen ? item.label : ''}
-                style={{ position: 'relative' }}
-              >
-                <Icon size={20} />
-                {sidebarOpen && <span>{item.label}</span>}
-                {item.path === '/alerts' && unresolvedAlerts > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    right: sidebarOpen ? '12px' : '6px',
-                    top: '8px',
-                    minWidth: '18px',
-                    height: '18px',
-                    borderRadius: '9px',
-                    background: '#ef4444',
-                    color: 'white',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 5px',
-                    lineHeight: 1
-                  }}>
-                    {unresolvedAlerts > 99 ? '99+' : unresolvedAlerts}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          <div className="radio-container" style={{ '--total-radio': navItems.length }}>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+                  title={!sidebarOpen ? item.label : ''}
+                >
+                  <Icon size={20} />
+                  {sidebarOpen && <span>{item.label}</span>}
+                  {item.path === '/alerts' && unresolvedAlerts > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      right: sidebarOpen ? '12px' : '6px',
+                      top: '12px',
+                      minWidth: '18px',
+                      height: '18px',
+                      borderRadius: '9px',
+                      background: '#ef4444',
+                      color: 'white',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 5px',
+                      lineHeight: 1
+                    }}>
+                      {unresolvedAlerts > 99 ? '99+' : unresolvedAlerts}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+            
+            <div className="glider-container" style={{ opacity: navItems.findIndex(i => isActive(i.path)) >= 0 ? 1 : 0 }}>
+              <div 
+                className="glider" 
+                style={{ transform: `translateY(${Math.max(0, navItems.findIndex(i => isActive(i.path))) * 100}%)` }}
+              ></div>
+            </div>
+          </div>
         </nav>
 
         <div className="sidebar-footer">

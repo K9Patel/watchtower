@@ -14,6 +14,7 @@ const VerifyEmailPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const inputRefs = useRef([]);
 
@@ -71,7 +72,10 @@ const VerifyEmailPage = () => {
     try {
       const res = await verifyEmail({ email, code: codeStr });
       login(res.data.token, res.data.user);
-      navigate('/', { replace: true });
+      setRedirecting(true);
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 900);
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.error || 'Verification failed.';
       setError(msg);
@@ -100,23 +104,61 @@ const VerifyEmailPage = () => {
     if (codeStr.length === 6) handleVerify(codeStr);
   };
 
+  const renderOrbitItems = (prefix) => Array.from({ length: 21 }, (_, i) => (
+    <div key={`${prefix}-${i}`} className="auth-orbit-item" style={{ '--i': i }}></div>
+  ));
+
+  if (redirecting) {
+    return (
+      <div className="auth-page">
+        <div className="auth-orbit-container auth-orbit-container--left" aria-hidden="true">
+          {renderOrbitItems('verify-left-loading')}
+        </div>
+        <div className="auth-orbit-container auth-orbit-container--right" aria-hidden="true">
+          {renderOrbitItems('verify-right-loading')}
+        </div>
+        <div className="auth-loading-overlay">
+          <div className="banter-loader" aria-hidden="true">
+            <div className="banter-loader__box"></div>
+            <div className="banter-loader__box"></div>
+            <div className="banter-loader__box"></div>
+            <div className="banter-loader__box"></div>
+            <div className="banter-loader__box"></div>
+            <div className="banter-loader__box"></div>
+            <div className="banter-loader__box"></div>
+            <div className="banter-loader__box"></div>
+            <div className="banter-loader__box"></div>
+          </div>
+          <p className="auth-loading-text">Verifying your email...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="auth-page">
-      <div className="auth-card" style={{ textAlign: 'center' }}>
+      <div className="auth-orbit-container auth-orbit-container--left" aria-hidden="true">
+        {renderOrbitItems('verify-left')}
+      </div>
+      <div className="auth-orbit-container auth-orbit-container--right" aria-hidden="true">
+        {renderOrbitItems('verify-right')}
+      </div>
+      <div className="auth-container">
+      <div className="auth-card auth-card-elevated" style={{ textAlign: 'center', maxWidth: '440px' }}>
         <div className="auth-logo" style={{ justifyContent: 'center' }}>
-          <div className="auth-logo-icon">🗼</div>
           <div>
-            <h1>Watch<span>Tower</span></h1>
+            <h1>WatchTower</h1>
           </div>
         </div>
         <p className="auth-subtitle" style={{ marginBottom: '16px' }}>Verify your email address</p>
 
-        <div className="auth-alert auth-alert-info" style={{ textAlign: 'left' }}>
-          📧 We sent a 6-digit code to <strong>{email}</strong>
+        <div className="auth-alert auth-alert-info auth-alert-stack">
+          <span>We&apos;ve sent a 6-digit verification code to</span>
+          <strong>{email}</strong>
         </div>
 
-        {error && <div className="auth-alert auth-alert-error" style={{ textAlign: 'left' }}>⚠ {error}</div>}
-        {success && <div className="auth-alert auth-alert-success" style={{ textAlign: 'left' }}>✓ {success}</div>}
+        {error && <div className="auth-alert auth-alert-error auth-alert-stack">{error}</div>}
+        {success && <div className="auth-alert auth-alert-success auth-alert-stack">{success}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="otp-container" onPaste={handlePaste}>
@@ -136,8 +178,12 @@ const VerifyEmailPage = () => {
             ))}
           </div>
 
-          <button type="submit" className="auth-btn" disabled={loading || code.join('').length < 6}>
-            {loading ? 'Verifying...' : 'Verify Email →'}
+          <button type="submit" className="auth-btn auth-btn-animated" disabled={loading || code.join('').length < 6}>
+            <span className="btn-line" />
+            <span className="btn-line" />
+            <span className="btn-line" />
+            <span className="btn-line" />
+            <span className="btn-text">{loading ? 'Verifying...' : 'VERIFY EMAIL →'}</span>
           </button>
         </form>
 
@@ -155,6 +201,7 @@ const VerifyEmailPage = () => {
         <p className="auth-footer">
           <Link to="/login">← Back to login</Link>
         </p>
+      </div>
       </div>
     </div>
   );

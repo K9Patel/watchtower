@@ -8,15 +8,15 @@ const DevicesTable = ({ devices, clusters }) => {
 
   const getClusterStyles = (cluster) => {
     switch (cluster) {
-      case 'HIGH_USAGE': return { bg: 'rgba(239, 68, 68, 0.2)', color: '#f87171' };
-      case 'MED_USAGE':  return { bg: 'rgba(234, 179, 8, 0.2)', color: '#facc15' };
-      case 'LOW_USAGE':  return { bg: 'rgba(34, 197, 94, 0.2)', color: '#4ade80' };
-      default: return { bg: 'rgba(51, 65, 85, 0.3)', color: '#94a3b8' };
+      case 'HIGH_USAGE': return { bg: 'rgba(175, 139, 78, 0.18)', color: '#d8b277' };
+      case 'MED_USAGE':  return { bg: 'rgba(139, 117, 81, 0.18)', color: '#c7ab80' };
+      case 'LOW_USAGE':  return { bg: 'rgba(90, 86, 78, 0.22)', color: '#b8b2a7' };
+      default: return { bg: 'rgba(70, 70, 70, 0.3)', color: '#9ca3af' };
     }
   };
 
   const normalizeStatus = (status) => String(status || 'OFFLINE').toUpperCase();
-  const getStatusColor = (status) => normalizeStatus(status) === 'ONLINE' ? '#4ade80' : '#f87171';
+  const getStatusColor = (status) => normalizeStatus(status) === 'ONLINE' ? '#d8b277' : '#7d8188';
 
   // Filter options: ALL, ONLINE, OFFLINE, AUTO
   const activeDevices = devices.filter((d) => d?.isActive !== false);
@@ -27,10 +27,10 @@ const DevicesTable = ({ devices, clusters }) => {
     : activeDevices;
 
   return (
-    <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+    <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Server size={20} color="var(--accent-color)" />
+          <Server size={20} color="#d8b277" />
           Discovered Devices ({activeDevices.length})
         </h3>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -38,9 +38,10 @@ const DevicesTable = ({ devices, clusters }) => {
             <button key={f}
               onClick={() => setFilter(f)}
               style={{
-                background: filter === f ? 'var(--accent-color)' : 'rgba(51, 65, 85, 0.4)',
-                color: filter === f ? 'white' : 'var(--text-secondary)',
-                border: 'none', padding: '6px 12px', borderRadius: '6px',
+                background: filter === f ? 'rgba(165, 132, 77, 0.3)' : 'rgba(36, 39, 44, 0.72)',
+                color: filter === f ? '#f3e5c6' : '#9ca3af',
+                border: `1px solid ${filter === f ? 'rgba(216, 178, 119, 0.45)' : 'rgba(115, 120, 130, 0.28)'}`,
+                padding: '6px 12px', borderRadius: '6px',
                 fontSize: '11px', fontWeight: 600, cursor: 'pointer',
               }}>
               {f}
@@ -49,7 +50,7 @@ const DevicesTable = ({ devices, clusters }) => {
         </div>
       </div>
 
-      <div className="devices-table-wrapper" style={{ flex: 1, overflowY: 'auto' }}>
+      <div className="devices-table-wrapper" style={{ overflowY: 'auto' }}>
         <table className="devices-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--panel-border)', color: 'var(--text-secondary)' }}>
@@ -74,8 +75,9 @@ const DevicesTable = ({ devices, clusters }) => {
                       {d.isAutoDiscovered && (
                         <span style={{
                           fontSize: '9px', fontWeight: 700,
-                          background: 'rgba(99,102,241,0.15)',
-                          color: '#818cf8', padding: '2px 6px', borderRadius: '10px',
+                          background: 'rgba(116, 106, 88, 0.26)',
+                          color: '#d0b78c', padding: '2px 6px', borderRadius: '10px',
+                          border: '1px solid rgba(208, 183, 140, 0.24)',
                           letterSpacing: '0.06em', flexShrink: 0,
                         }}>AUTO</span>
                       )}
@@ -111,13 +113,15 @@ const DevicesTable = ({ devices, clusters }) => {
                     {d.baselineReady ? (
                       <span style={{
                         fontSize: '10px', fontWeight: 700,
-                        background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+                        background: 'rgba(112, 98, 75, 0.22)', color: '#d6b885',
                         padding: '3px 8px', borderRadius: '10px',
+                        border: '1px solid rgba(214, 184, 133, 0.28)',
                       }}>✓ Ready</span>
                     ) : (
                       <span style={{
                         fontSize: '10px', fontWeight: 700,
-                        background: 'rgba(168,85,247,0.15)', color: '#c084fc',
+                        background: 'rgba(67, 70, 75, 0.34)', color: '#a7adb6',
+                        border: '1px solid rgba(145, 152, 164, 0.26)',
                         padding: '3px 8px', borderRadius: '10px',
                         display: 'inline-flex', alignItems: 'center', gap: '3px',
                         animation: 'learningPulse 2.5s ease-in-out infinite',

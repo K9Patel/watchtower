@@ -60,7 +60,10 @@ const ReportsPage = () => {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Reports</h1>
+          <h1 className="btn-amber-text" data-text="Reports" style={{ margin: 0, textTransform: 'none' }}>
+            <span className="actual-text">Reports</span>
+            <span aria-hidden="true" className="hover-text">Reports</span>
+          </h1>
           <p className="page-subtitle">Generate and view network reports</p>
         </div>
       </div>
