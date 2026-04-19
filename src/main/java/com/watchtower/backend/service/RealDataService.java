@@ -81,7 +81,7 @@ public class RealDataService {
             lastBytesOut = currentOut;
 
             double totalMB = (deltaIn + deltaOut) / (1024.0 * 1024.0);
-            double pct     = Math.min((totalMB / 1000.0) * 100, 100.0);
+            double pct     = Math.min((totalMB / 100.0) * 100, 100.0);
 
             // AJT Unit 3 — InetAddress: get local machine IP
             String localIp = InetAddress.getLocalHost().getHostAddress();

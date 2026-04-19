@@ -1,7 +1,7 @@
 package com.watchtower.backend.controller;
 
-import com.watchtower.backend.rmi.DiagnosisClient;
-import com.watchtower.backend.rmi.DiagnosisRemote;
+//import com.watchtower.backend.rmi.DiagnosisClient;
+//import com.watchtower.backend.rmi.DiagnosisRemote;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,15 +10,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AJT — RMI REST Bridge:
- * Exposes RMI methods as REST endpoints so the JavaScript dashboard
- * can call them from the browser (browsers can't speak raw RMI sockets).
+ * AJT — RMI REST Bridge [DEPRECATED - DEAD CODE]
+ * This class uses RMI which is no longer required.
+ * The functionality is replaced by REST endpoints (StatsController, AnalysisService).
+ * Disabled to prevent Spring bean initialization errors.
  */
-@RestController
-@RequestMapping("/api/rmi")
-@CrossOrigin(origins = "*")
+//@RestController
+//@RequestMapping("/api/rmi")
+//@CrossOrigin(origins = "*")
 public class RmiController {
 
+    /*
     private DiagnosisRemote getRemote() {
         return DiagnosisClient.connect();
     }
@@ -63,4 +65,5 @@ public class RmiController {
         return ResponseEntity.status(503)
                 .body(Map.of("error", "RMI server not reachable on localhost:1099"));
     }
+    */
 }
