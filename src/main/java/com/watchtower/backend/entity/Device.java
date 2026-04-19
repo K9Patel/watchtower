@@ -88,6 +88,29 @@ public class Device {
     @Column(name = "os_type", length = 50)
     private String osType;
 
+    // ── DPI live snapshot fields ─────────────────────────────────────────────
+
+    @Builder.Default
+    @Column(name = "current_service", length = 30)
+    private String currentService = "UNKNOWN";
+
+    @Builder.Default
+    @Column(name = "current_category", length = 20)
+    private String currentCategory = "UNKNOWN";
+
+    @Column(name = "current_sni_hostname", length = 255)
+    private String currentSniHostname;
+
+    @Column(name = "current_destination_ip", length = 45)
+    private String currentDestinationIp;
+
+    @Column(name = "current_destination_port")
+    private Integer currentDestinationPort;
+
+    @Builder.Default
+    @Column(name = "dpi_last_updated")
+    private LocalDateTime dpiLastUpdated = LocalDateTime.now();
+
     // ── V6: baseline learning fields ──────────────────────────────────────────
 
     /**

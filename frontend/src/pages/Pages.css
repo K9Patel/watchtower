@@ -2148,6 +2148,54 @@
   font-size: 12px;
 }
 
+.router-map-actions {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.router-map-location-input {
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.5);
+  color: #e2e8f0;
+  padding: 8px 10px;
+  font-size: 12px;
+  outline: none;
+}
+
+.router-map-location-input:focus {
+  border-color: rgba(216, 178, 119, 0.7);
+  box-shadow: 0 0 0 2px rgba(216, 178, 119, 0.18);
+}
+
+.router-map-location-btn {
+  border-radius: 8px;
+  border: 1px solid rgba(216, 178, 119, 0.55);
+  background: linear-gradient(120deg, rgba(216, 178, 119, 0.28), rgba(165, 132, 77, 0.3));
+  color: #f6e7cd;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.router-map-location-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.router-map-location-status {
+  grid-column: 1 / -1;
+  border-radius: 8px;
+  border: 1px solid rgba(71, 85, 105, 0.55);
+  background: rgba(15, 23, 42, 0.6);
+  color: #cbd5e1;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
 .router-map-canvas-wrap {
   border-radius: 10px;
   overflow: hidden;
@@ -2389,6 +2437,10 @@
   .router-map-canvas {
     min-height: 220px;
     height: 220px;
+  }
+
+  .router-map-actions {
+    grid-template-columns: 1fr;
   }
 
   .summary-cards-grid {

@@ -80,7 +80,7 @@ public class SecurityConfig {
                         "/api/v1/auth/reset-password"
                 ).permitAll()
                 // Existing dashboard API — public (backward compatibility)
-                .requestMatchers("/api/**").permitAll()
+                .requestMatchers("/api/**", "/api/dpi/**").permitAll()
                 // Public: WebSocket endpoint (SockJS uses HTTP for handshake)
                 .requestMatchers("/ws/**").permitAll()
                 // Public: static assets + login page

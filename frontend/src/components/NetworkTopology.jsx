@@ -25,6 +25,9 @@ const NetworkTopology = () => {
   const [topology, setTopology] = useState(null);
   const [loading, setLoading] = useState(true);
   const [width, setWidth] = useState(960);
+  const [routerLocationBusy, setRouterLocationBusy] = useState(false);
+  const [routerLocationMessage, setRouterLocationMessage] = useState('');
+  const [routerAddressLabel, setRouterAddressLabel] = useState('');
 
   const fetchTopology = async () => {
     try {
@@ -109,6 +112,50 @@ const NetworkTopology = () => {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return [lat, lng];
   }, [topology]);
+
+  const setRouterLocationFromDevice = () => {
+    if (!navigator.geolocation) {
+      setRouterLocationMessage('Browser geolocation is not available in this environment.');
+      return;
+    }
+
+    setRouterLocationBusy(true);
+    setRouterLocationMessage('Fetching your current location...');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const payload = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            addressLabel: routerAddressLabel,
+          };
+
+          const { data } = await axios.post(`${API_BASE_URL}/topology/gateway/location/manual`, payload);
+          setRouterLocationMessage(data?.message || 'Router location saved successfully.');
+          await fetchTopology();
+        } catch (error) {
+          const message = error?.response?.data?.message || 'Failed to update router location.';
+          setRouterLocationMessage(message);
+        } finally {
+          setRouterLocationBusy(false);
+        }
+      },
+      (error) => {
+        let message = 'Unable to get current location.';
+        if (error?.code === 1) message = 'Location permission denied. Allow location access and try again.';
+        if (error?.code === 2) message = 'Location unavailable. Make sure GPS/network location is enabled.';
+        if (error?.code === 3) message = 'Location request timed out. Please retry.';
+        setRouterLocationMessage(message);
+        setRouterLocationBusy(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 0,
+      },
+    );
+  };
 
   return (
     <div className="glass-panel topology-panel">
@@ -208,7 +255,30 @@ const NetworkTopology = () => {
       <div className="router-map-panel">
         <div className="router-map-head">
           <strong>Gateway Map</strong>
-          <span>{topology?.gatewayIp || 'unknown'} {topology?.gatewayLocation ? `• ${topology.gatewayLocation}` : ''}</span>
+          <span>
+            {topology?.gatewayIp || 'unknown'}
+            {topology?.gatewayLocation ? ` • ${topology.gatewayLocation}` : ''}
+            {topology?.gatewayLocationSource === 'MANUAL' ? ' • Exact (manual)' : topology?.gatewayLocation ? ' • Approximate (IP)' : ''}
+          </span>
+        </div>
+        <div className="router-map-actions">
+          <input
+            type="text"
+            className="router-map-location-input"
+            value={routerAddressLabel}
+            onChange={(e) => setRouterAddressLabel(e.target.value)}
+            placeholder="Optional address label (e.g., Home Router - Office 2nd Floor)"
+            maxLength={100}
+          />
+          <button
+            type="button"
+            className="router-map-location-btn"
+            onClick={setRouterLocationFromDevice}
+            disabled={routerLocationBusy}
+          >
+            {routerLocationBusy ? 'Saving...' : 'Use This Device Location For Router'}
+          </button>
+          {routerLocationMessage ? <div className="router-map-location-status">{routerLocationMessage}</div> : null}
         </div>
         <div className="router-map-canvas-wrap">
           {gatewayCoords ? (
@@ -228,7 +298,7 @@ const NetworkTopology = () => {
               </CircleMarker>
             </MapContainer>
           ) : (
-            <div className="attack-path-placeholder">Gateway location unavailable yet. Trigger re-locate on router device.</div>
+            <div className="attack-path-placeholder">Router location is not set yet. Use the button above to store your exact router location.</div>
           )}
         </div>
       </div>

@@ -11,6 +11,7 @@ import com.watchtower.backend.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -70,12 +71,14 @@ public class NetworkTopologyService {
         Double gatewayLat = null;
         Double gatewayLng = null;
         String gatewayLocation = null;
+        String gatewayLocationSource = null;
         if (gatewayDevice.isPresent()) {
             Optional<DeviceGeolocation> geo = geolocationRepository.findByDeviceId(gatewayDevice.get().getId());
             if (geo.isPresent()) {
                 gatewayLat = geo.get().getLatitude();
                 gatewayLng = geo.get().getLongitude();
                 gatewayLocation = joinLocation(geo.get().getCityName(), geo.get().getRegionName(), geo.get().getCountryName());
+                gatewayLocationSource = geo.get().getSource();
             }
         }
 
@@ -146,6 +149,7 @@ public class NetworkTopologyService {
         result.put("gatewayLat", gatewayLat);
         result.put("gatewayLng", gatewayLng);
         result.put("gatewayLocation", gatewayLocation);
+        result.put("gatewayLocationSource", gatewayLocationSource);
         result.put("nodes", nodes);
         result.put("edges", edges);
         result.put("totalDevices", Math.max(0, nodes.size() - 1));
@@ -153,6 +157,63 @@ public class NetworkTopologyService {
         result.put("totalBandwidthMbps", Math.round(totalBandwidth * 100.0) / 100.0);
 
         return result;
+    }
+
+    @Transactional
+    public Map<String, Object> saveGatewayManualLocation(Double latitude, Double longitude, String addressLabel) {
+        if (latitude == null || longitude == null || !Double.isFinite(latitude) || !Double.isFinite(longitude)) {
+            throw new IllegalArgumentException("Latitude and longitude are required.");
+        }
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            throw new IllegalArgumentException("Latitude/longitude values are out of range.");
+        }
+
+        List<Device> devices = deviceRepository.findByIsActiveTrue();
+        String gatewayIp = detectGatewayIp(devices);
+
+        Optional<Device> gatewayDevice = devices.stream()
+                .filter(d -> gatewayIp != null && gatewayIp.equals(d.getIpAddress()))
+                .findFirst();
+
+        if (gatewayDevice.isEmpty()) {
+            throw new IllegalStateException("Gateway device not found in active devices. Run network scan and try again.");
+        }
+
+        Device device = gatewayDevice.get();
+        DeviceGeolocation geo = geolocationRepository.findByDeviceId(device.getId())
+                .orElseGet(DeviceGeolocation::new);
+
+        String cleanedAddressLabel = addressLabel == null ? "" : addressLabel.trim();
+        String locationLabel = cleanedAddressLabel.isBlank() ? "Manual router location" : cleanedAddressLabel;
+
+        geo.setDevice(device);
+        geo.setIpAddress(gatewayIp != null ? gatewayIp : device.getIpAddress());
+        geo.setLatitude(latitude);
+        geo.setLongitude(longitude);
+        geo.setCityName(locationLabel);
+        geo.setRegionName(null);
+        geo.setCountryName(null);
+        geo.setCountryCode(null);
+        geo.setIspName(null);
+        geo.setTimezone(null);
+        geo.setIsPrivate(true);
+        geo.setSource("MANUAL");
+        geo.setLastUpdated(LocalDateTime.now());
+
+        geolocationRepository.save(geo);
+
+        cachedTopology = null;
+        cachedAt = 0;
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("updated", true);
+        payload.put("gatewayIp", gatewayIp);
+        payload.put("gatewayLat", latitude);
+        payload.put("gatewayLng", longitude);
+        payload.put("gatewayLocation", locationLabel);
+        payload.put("gatewayLocationSource", "MANUAL");
+        payload.put("message", "Gateway location updated to manual coordinates.");
+        return payload;
     }
 
     private String deriveRiskLevel(Device device, Alert.Severity maxSeverity, String driftLevel) {

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Server, Brain } from 'lucide-react';
+import TrafficBadge from './TrafficBadge';
+import useDpiSocket from '../hooks/useDpiSocket';
 
 // Removed vendor emoji and color mapping per user request
 
 const DevicesTable = ({ devices, clusters }) => {
   const [filter, setFilter] = useState('ALL');
+  const { dpiByDevice } = useDpiSocket();
 
   const getClusterStyles = (cluster) => {
     switch (cluster) {
@@ -17,6 +20,15 @@ const DevicesTable = ({ devices, clusters }) => {
 
   const normalizeStatus = (status) => String(status || 'OFFLINE').toUpperCase();
   const getStatusColor = (status) => normalizeStatus(status) === 'ONLINE' ? '#d8b277' : '#7d8188';
+
+  const resolveTraffic = (device) => {
+    const live = dpiByDevice?.[device.id];
+    return {
+      service: live?.serviceName || device.currentService || 'UNKNOWN',
+      category: live?.trafficCategory || device.currentCategory || 'UNKNOWN',
+      confidence: live?.confidence,
+    };
+  };
 
   // Filter options: ALL, ONLINE, OFFLINE, AUTO
   const activeDevices = devices.filter((d) => d?.isActive !== false);
@@ -58,6 +70,7 @@ const DevicesTable = ({ devices, clusters }) => {
               <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>Vendor</th>
               <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>IP Address</th>
               <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>MAC Address</th>
+              <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>Traffic</th>
               <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>K-Means Cluster</th>
               <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>Baseline</th>
               <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>Status</th>
@@ -68,6 +81,7 @@ const DevicesTable = ({ devices, clusters }) => {
               const cluster = clusters?.[d.id] || 'N/A';
               const cStyle  = getClusterStyles(cluster);
               const status = normalizeStatus(d.status);
+              const traffic = resolveTraffic(d);
               return (
                 <tr key={d.id} style={{ borderBottom: '1px solid rgba(51, 65, 85, 0.3)', position: 'relative' }}>
                   <td style={{ padding: '12px 8px', fontWeight: 600 }}>
@@ -99,6 +113,13 @@ const DevicesTable = ({ devices, clusters }) => {
                     >
                       {d.macAddress || '—'}
                     </span>
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <TrafficBadge
+                      service={traffic.service}
+                      category={traffic.category}
+                      confidence={traffic.confidence}
+                    />
                   </td>
                   <td style={{ padding: '12px 8px' }}>
                     <span style={{
@@ -147,7 +168,7 @@ const DevicesTable = ({ devices, clusters }) => {
 
             {displayDevices.length === 0 && (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
                   No devices found for this filter.
                 </td>
               </tr>

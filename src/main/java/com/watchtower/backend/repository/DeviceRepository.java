@@ -56,6 +56,29 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     @Query("UPDATE Device d SET d.status = 'OFFLINE' WHERE d.isAutoDiscovered = true")
     void markAllAutoDiscoveredOffline();
 
+        /**
+         * Updates live DPI snapshot columns used by DevicesTable and DeviceDetail page.
+         */
+        @Modifying
+        @Transactional
+        @Query("UPDATE Device d SET " +
+            "d.currentService = :service, " +
+            "d.currentCategory = :category, " +
+            "d.currentSniHostname = :sniHostname, " +
+            "d.currentDestinationIp = :destinationIp, " +
+            "d.currentDestinationPort = :destinationPort, " +
+            "d.dpiLastUpdated = :updatedAt " +
+            "WHERE d.id = :deviceId")
+        int updateDpiSnapshot(
+            @Param("deviceId") Long deviceId,
+            @Param("service") String service,
+            @Param("category") String category,
+            @Param("sniHostname") String sniHostname,
+            @Param("destinationIp") String destinationIp,
+            @Param("destinationPort") Integer destinationPort,
+            @Param("updatedAt") LocalDateTime updatedAt
+        );
+
     /** Hard-delete stale auto-discovered devices (left the network) */
     @Modifying
     @Transactional

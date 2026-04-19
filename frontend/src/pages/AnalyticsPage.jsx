@@ -12,7 +12,9 @@ const AnalyticsPage = () => {
 
   useEffect(() => {
     fetchAnalytics();
-    const intervalId = setInterval(fetchAnalytics, 10000); // Refresh every 10 seconds for live data
+    const intervalId = setInterval(() => {
+      fetchAnalytics();
+    }, 10000); // Refresh every 10 seconds for live data
     return () => clearInterval(intervalId);
   }, []);
 

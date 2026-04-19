@@ -1,15 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Activity, ShieldAlert, Clock, Network, Server, HardDrive, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Activity, ShieldAlert, Clock, Network, Server, HardDrive, AlertTriangle, Wifi, TrendingUp } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
+import TrafficBadge from '../components/TrafficBadge';
 import './Pages.css';
 
 const DeviceDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [dpiSnapshot, setDpiSnapshot] = useState(null);
+  const [dpiHistory, setDpiHistory] = useState([]);
+  const [dpiHistoryRange, setDpiHistoryRange] = useState('1h');
   const [loading, setLoading] = useState(true);
+  const [dpiLoading, setDpiLoading] = useState(false);
   const [error, setError] = useState(null);
   const pollRef = useRef(null);
 
@@ -39,6 +44,23 @@ const DeviceDetailPage = () => {
     }
   }, [id]);
 
+  const fetchDpiData = useCallback(async () => {
+    if (!id) return;
+    try {
+      setDpiLoading(true);
+      const [snapshotRes, historyRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/dpi/device/${id}`),
+        axios.get(`${API_BASE_URL}/dpi/device/${id}/history?range=${dpiHistoryRange}`),
+      ]);
+      setDpiSnapshot(snapshotRes.data);
+      setDpiHistory(historyRes.data || []);
+    } catch (err) {
+      console.debug('DPI data not available:', err.message);
+    } finally {
+      setDpiLoading(false);
+    }
+  }, [id, dpiHistoryRange]);
+
   useEffect(() => {
     setLoading(true);
     fetchDeviceDetails();
@@ -46,6 +68,12 @@ const DeviceDetailPage = () => {
     pollRef.current = setInterval(fetchDeviceDetails, 10000); // refresh every 10s while available
     return () => stopPolling();
   }, [fetchDeviceDetails]);
+
+  useEffect(() => {
+    fetchDpiData();
+    const dpiInterval = setInterval(fetchDpiData, 5000); // refresh DPI every 5s
+    return () => clearInterval(dpiInterval);
+  }, [fetchDpiData]);
 
   if (loading) {
     return (
@@ -204,7 +232,125 @@ const DeviceDetailPage = () => {
             </div>
           </div>
         </div>
+
+        <div className="device-card">
+          <div className="device-header">
+            <h3 className="device-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Wifi size={18} /> Deep Packet Inspection (DPI)
+            </h3>
+          </div>
+          <div className="device-details">
+            {dpiSnapshot ? (
+              <>
+                <div className="detail-row">
+                  <span className="detail-label">Current Traffic</span>
+                  <span className="detail-value">
+                    <TrafficBadge
+                      service={dpiSnapshot.currentService}
+                      category={dpiSnapshot.currentCategory}
+                      confidence={dpiSnapshot.confidence}
+                    />
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">SNI Hostname</span>
+                  <span className="detail-value font-mono" style={{ fontSize: '11px' }}>{dpiSnapshot.sniHostname || 'N/A'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Destination IP</span>
+                  <span className="detail-value font-mono">{dpiSnapshot.destinationIp || 'N/A'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Port</span>
+                  <span className="detail-value font-mono">{dpiSnapshot.destinationPort || 'N/A'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Last Updated</span>
+                  <span className="detail-value">{dpiSnapshot.lastUpdated ? new Date(dpiSnapshot.lastUpdated).toLocaleString() : 'Never'}</span>
+                </div>
+              </>
+            ) : (
+              <p style={{ color: 'var(--text-secondary)', textAlign: 'center', margin: '20px 0' }}>
+                No DPI data available yet. Enable packet capture to see live traffic classification.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* DPI History */}
+      {dpiSnapshot && dpiHistory && dpiHistory.length > 0 && (
+        <div className="glass-panel" style={{ marginTop: '32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <TrendingUp size={20} color="var(--accent-color)" />
+              Traffic History
+            </h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {['1h', '6h', '24h', '7d'].map(range => (
+                <button
+                  key={range}
+                  onClick={() => setDpiHistoryRange(range)}
+                  disabled={dpiLoading}
+                  style={{
+                    background: dpiHistoryRange === range ? 'var(--accent-color)' : 'rgba(51, 65, 85, 0.4)',
+                    color: dpiHistoryRange === range ? 'white' : 'var(--text-secondary)',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: dpiLoading ? 'not-allowed' : 'pointer',
+                    opacity: dpiLoading ? 0.6 : 1,
+                  }}
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--panel-border)', color: 'var(--text-secondary)' }}>
+                  <th style={{ padding: '8px', textAlign: 'left' }}>Timestamp</th>
+                  <th style={{ padding: '8px', textAlign: 'left' }}>Service</th>
+                  <th style={{ padding: '8px', textAlign: 'left' }}>Category</th>
+                  <th style={{ padding: '8px', textAlign: 'left' }}>SNI Hostname</th>
+                  <th style={{ padding: '8px', textAlign: 'left' }}>Destination IP</th>
+                  <th style={{ padding: '8px', textAlign: 'center' }}>Port</th>
+                  <th style={{ padding: '8px', textAlign: 'center' }}>Confidence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dpiHistory.map((entry, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid rgba(51, 65, 85, 0.2)' }}>
+                    <td style={{ padding: '8px', fontSize: '10px', color: 'var(--text-secondary)' }}>
+                      {new Date(entry.classifiedAt).toLocaleString()}
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      <TrafficBadge service={entry.serviceName} category={entry.trafficCategory} confidence={entry.confidence} />
+                    </td>
+                    <td style={{ padding: '8px', color: 'var(--text-secondary)' }}>{entry.trafficCategory}</td>
+                    <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '10px', color: 'var(--text-secondary)' }}>
+                      {entry.sniHostname || '—'}
+                    </td>
+                    <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '10px', color: 'var(--text-secondary)' }}>
+                      {entry.destinationIp || '—'}
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+                      {entry.port || '—'}
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      {entry.confidence}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

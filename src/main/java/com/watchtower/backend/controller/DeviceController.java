@@ -225,8 +225,8 @@ public class DeviceController {
 
     private String computeGeoSourceLabel(DeviceGeolocation geo) {
         if (geo == null) return "Estimated from local topology";
-        if (Boolean.TRUE.equals(geo.getIsPrivate())) return "Private LAN IP mapped via gateway city";
         if ("MANUAL".equalsIgnoreCase(geo.getSource())) return "Manual verified location";
+        if (Boolean.TRUE.equals(geo.getIsPrivate())) return "Private LAN IP mapped via gateway city";
         return "Public IP geolocation";
     }
 
