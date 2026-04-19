@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
 import NetworkTopology from '../components/NetworkTopology';
+import LoadingSpinner from '../components/LoadingSpinner';
+import AnimatedSearch from '../components/AnimatedSearch';
 import './Pages.css';
 
 function timeAgo(isoString) {
@@ -38,26 +40,37 @@ function ScanBanner({ scanStatus, onScanNow }) {
       display: 'flex', alignItems: 'center', gap: '20px',
       padding: '16px 24px', marginBottom: '24px', borderRadius: '12px',
       background: 'var(--panel-bg)', border: '1px solid var(--panel-border)',
-      borderLeft: `3px solid ${isScanning ? '#6366f1' : '#22c55e'}`,
+      borderLeft: '3px solid #d4d4d8',
       position: 'relative', overflow: 'hidden',
     }}>
       {/* Sweep animation while scanning */}
       {isScanning && (
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.07), transparent)',
+          background: 'linear-gradient(90deg, transparent, rgba(212,212,216,0.07), transparent)',
           animation: 'scanSweep 1.8s linear infinite', pointerEvents: 'none',
         }} />
       )}
 
-      {/* Radar icon */}
+      {/* Full-screen Radar Loader Overlay when scanning */}
+      {isScanning && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(5, 5, 5, 0.85)',
+          backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div className="radar-loader"><span></span></div>
+          <h2 style={{ color: '#d4d4d8', marginTop: '40px', letterSpacing: '4px', textTransform: 'uppercase', fontSize: '18px', fontWeight: '600' }}>Scanning Network...</h2>
+        </div>
+      )}
+
+      {/* Static Radar icon for banner */}
       <div style={{
         width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-        background: isScanning ? 'rgba(99,102,241,0.15)' : 'rgba(34,197,94,0.12)',
+        background: 'rgba(212,212,216,0.12)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        animation: isScanning ? 'radarPulse 1.5s ease-in-out infinite' : 'none',
       }}>
-        <Radar size={22} color={isScanning ? '#6366f1' : '#22c55e'} />
+        <Radar size={22} color="#d4d4d8" />
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -73,10 +86,10 @@ function ScanBanner({ scanStatus, onScanNow }) {
           }
         </div>
         {isScanning && (
-          <div style={{ marginTop: '8px', height: '3px', background: 'rgba(99,102,241,0.15)', borderRadius: '4px', overflow: 'hidden' }}>
+          <div style={{ marginTop: '8px', height: '3px', background: 'rgba(212,212,216,0.15)', borderRadius: '4px', overflow: 'hidden' }}>
             <div style={{
               height: '100%', width: '35%', borderRadius: '4px',
-              background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+              background: 'linear-gradient(90deg, #a1a1aa, #d4d4d8)',
               animation: 'progressIndeterminate 1.6s ease-in-out infinite',
             }} />
           </div>
@@ -90,10 +103,10 @@ function ScanBanner({ scanStatus, onScanNow }) {
         style={{
           display: 'flex', alignItems: 'center', gap: '8px',
           padding: '10px 20px', borderRadius: '8px', border: 'none',
-          background: isScanning ? 'rgba(99,102,241,0.15)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-          color: isScanning ? 'var(--text-secondary)' : 'white',
+          background: isScanning ? 'rgba(212,212,216,0.15)' : 'linear-gradient(135deg,#a1a1aa,#d4d4d8)',
+          color: isScanning ? 'var(--text-secondary)' : '#111',
           fontWeight: 700, fontSize: '13px', cursor: isScanning ? 'not-allowed' : 'pointer',
-          flexShrink: 0, boxShadow: isScanning ? 'none' : '0 4px 14px rgba(99,102,241,0.35)',
+          flexShrink: 0, boxShadow: isScanning ? 'none' : '0 4px 14px rgba(212,212,216,0.35)',
           transition: 'all 0.2s',
         }}>
         <RefreshCw size={15} style={{ animation: isScanning ? 'spin 1s linear infinite' : 'none' }} />
@@ -114,11 +127,11 @@ function StatsPills({ devices, scanStatus }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '14px', marginBottom: '24px' }}>
       {[
-        { label: 'Total Devices',  value: devices.length, color: '#6366f1', icon: <Monitor size={16}/> },
-        { label: 'Online Now',     value: online,          color: '#22c55e', icon: <Wifi size={16}/> },
-        { label: 'Offline',        value: devices.length - online, color: '#6b7280', icon: <WifiOff size={16}/> },
-        { label: 'Auto-Discovered',value: autoDisc,        color: '#f59e0b', icon: <Radar size={16}/> },
-        { label: 'Learning',       value: learning,        color: '#a855f7', icon: <Brain size={16}/> },
+        { label: 'Total Devices',  value: devices.length, color: '#d4d4d8', icon: <Monitor size={16}/> },
+        { label: 'Online Now',     value: online,          color: '#d4d4d8', icon: <Wifi size={16}/> },
+        { label: 'Offline',        value: devices.length - online, color: '#d4d4d8', icon: <WifiOff size={16}/> },
+        { label: 'Auto-Discovered',value: autoDisc,        color: '#d4d4d8', icon: <Radar size={16}/> },
+        { label: 'Learning',       value: learning,        color: '#fab570', icon: <Brain size={16}/> },
       ].map(({ label, value, color, icon }) => (
         <div key={label} className="glass-panel" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ width: 36, height: 36, borderRadius: '9px', background: `${color}18`, color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -146,121 +159,58 @@ function DeviceCard({ device, onClick }) {
     (Date.now() - new Date(device.lastSeenAt).getTime()) < 90_000;
 
   return (
-    <div
-      className="device-card"
-      id={`device-card-${device.id}`}
-      onClick={onClick}
-      style={{
-        cursor: 'pointer', position: 'relative', overflow: 'hidden',
-        borderColor: isNew ? 'rgba(99,102,241,0.55)' : undefined,
-        boxShadow: isNew ? '0 0 0 1px rgba(99,102,241,0.2),0 4px 20px rgba(99,102,241,0.12)' : undefined,
-      }}
-    >
-      {/* Generic accent bar */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: `linear-gradient(90deg,#4b5563,#9ca3af)` }} />
+    <div className="device-container">
+      <div
+        className="device-card"
+        id={`device-card-${device.id}`}
+        onClick={onClick}
+        style={{ cursor: 'pointer' }}
+      >
+        <div className="device-card-top-tags">
+          {isNew && <span className="device-pill device-pill-new">NEW</span>}
+          {isLearning && <span className="device-pill device-pill-learning">LEARNING</span>}
+        </div>
 
-      <div className="device-card-top-tags">
-        {isNew && <span className="device-pill device-pill-new">★ New</span>}
-        {isLearning && (
-          <span className="device-pill device-pill-learning">
-            <Brain size={11} />
-            Learning Baseline
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', marginTop: '0.5rem' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Monitor size={18} /> {device.deviceName || 'Unknown Device'}
+          </h3>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: isOnline ? '#22c55e' : 'var(--text-secondary)' }}>
+            {isOnline ? '● ONLINE' : '○ OFFLINE'}
           </span>
-        )}
-      </div>
+        </div>
 
-      <div className="device-header" style={{ marginTop: '14px', paddingRight: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-          {/* Avatar */}
-          <div style={{
-            width: 38, height: 38, borderRadius: '10px', flexShrink: 0, fontSize: '18px',
-            background: `linear-gradient(135deg,#4b556320,#9ca3af20)`,
-            border: `1px solid #4b556340`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Monitor size={18} color="var(--text-secondary)" />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div className="device-network-row">
+            <span className="device-network-label">IP Address</span>
+            <span className="device-network-value" style={{ fontFamily: 'monospace' }}>{device.ipAddress || '—'}</span>
           </div>
-          <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
-            <h3 className="device-name" style={{ fontSize: '14px', marginBottom: '1px' }} title={device.deviceName}>{device.deviceName}</h3>
-            {device.vendorName && (
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={device.vendorName}>{device.vendorName}</div>
-            )}
+          <div className="device-network-row">
+            <span className="device-network-label">MAC</span>
+            <span className="device-network-value" style={{ fontFamily: 'monospace' }}>{device.macAddress || '—'}</span>
           </div>
-        </div>
-        <span
-          className={`status-badge ${isOnline ? 'active' : 'inactive'}`}
-          style={{
-            alignSelf: 'flex-start',
-            marginTop: '4px',
-          }}
-        >
-          {isOnline ? '● Online' : '○ Offline'}
-        </span>
-      </div>
-
-      <div className="device-details" style={{ marginTop: '14px' }}>
-        <div className="detail-row">
-          <span className="detail-label">IP Address</span>
-          <span className="detail-value font-mono" style={{ fontSize: '13px', whiteSpace: 'nowrap' }}>{device.ipAddress}</span>
-        </div>
-        <div className="detail-row">
-          <span className="detail-label">MAC</span>
-          <span className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }} title={`Full MAC: ${device.macAddress || 'N/A'}`}>
-            {device.macAddress || '—'}
-          </span>
-        </div>
-        {device.vendorName && (
-          <div className="detail-row">
-            <span className="detail-label">Vendor</span>
-            <span style={{
-              fontSize: '11px', fontWeight: 600, padding: '2px 7px', borderRadius: '4px',
-              background: `#4b556320`, color: '#9ca3af',
-              maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }} title={device.vendorName}>{device.vendorName}</span>
+          <div className="device-network-row">
+            <span className="device-network-label">Vendor</span>
+            <span className="device-network-value" title={device.vendorName}>
+              {device.vendorName ? (device.vendorName.length > 20 ? device.vendorName.substring(0,20) + '...' : device.vendorName) : 'Unknown'}
+            </span>
           </div>
-        )}
-        {device.osType && (
-          <div className="detail-row">
-            <span className="detail-label">OS</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{device.osType}</span>
+          <div className="device-network-row">
+            <span className="device-network-label">Last Seen</span>
+            <span className="device-network-value">{timeAgo(device.lastSeenAt)}</span>
           </div>
-        )}
-        <div className="detail-row">
-          <span className="detail-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Clock size={11} /> Last Seen
-          </span>
-          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-            {timeAgo(device.lastSeenAt)}
-          </span>
-        </div>
-        {device.bandwidth > 0 && (
-          <div className="detail-row">
-            <span className="detail-label">Bandwidth</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <div style={{ width: '55px', height: '4px', background: 'rgba(0,0,0,0.2)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{
-                  width: `${Math.min(device.bandwidth, 100)}%`, height: '100%', borderRadius: '2px',
-                  background: device.bandwidth > 50 ? '#ef4444' : device.bandwidth > 20 ? '#f59e0b' : '#22c55e',
-                }} />
-              </div>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#6366f1' }}>
+          {device.bandwidth > 0 && (
+            <div className="device-network-row">
+              <span className="device-network-label">Bandwidth</span>
+              <span className="device-network-value" style={{ color: '#fab570' }}>
                 {typeof device.bandwidthMbps === 'number' && device.bandwidthMbps > 0
                   ? `${device.bandwidthMbps.toFixed(1)} Mbps`
                   : `${device.bandwidth.toFixed(1)}%`}
               </span>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Auto-discovered badge */}
-      {device.isAutoDiscovered && !isNew && (
-        <div style={{ marginTop: '12px', borderTop: '1px solid var(--panel-border)', paddingTop: '10px' }}>
-          <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.05em' }}>
-            📡 AUTO-DISCOVERED
-          </span>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -342,19 +292,15 @@ const DevicesPage = () => {
   const paginated   = filteredDevices.slice((currentPage - 1) * ITEMS, currentPage * ITEMS);
   const totalPages  = Math.ceil(filteredDevices.length / ITEMS);
 
-  if (loading) return (
-    <div className="loading-screen">
-      <div style={{ width: 56, height: 56, borderRadius: '50%', border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', animation: 'spin 1s linear infinite' }} />
-      <p style={{ color: 'var(--text-secondary)' }}>Discovering network devices…</p>
-    </div>
-  );
+  if (loading) return <LoadingSpinner text="DISCOVERING" />;
 
   return (
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Radar size={30} color="#6366f1" /> Live Network Discovery
+          <h1 className="btn-amber-text" data-text="Live Network Discovery" style={{ margin: 0, textTransform: 'none' }}>
+            <span className="actual-text">Live Network Discovery</span>
+            <span aria-hidden="true" className="hover-text">Live Network Discovery</span>
           </h1>
           <p className="page-subtitle">
             ARP auto-discovery · MAC identification · Real-time status · Stale cleanup every 5 min
@@ -368,71 +314,34 @@ const DevicesPage = () => {
       {/* Filters */}
       <div className="glass-panel filters-panel" style={{ marginBottom: '24px', flexWrap: 'wrap' }}>
         <div className="filter-group">
-          <Search size={16} color="var(--text-secondary)" />
-          <input
-            id="device-search"
-            type="text"
-            placeholder="Search name, IP, MAC, vendor…"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="search-input"
+          <AnimatedSearch 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)} 
+            placeholder="Search name, IP, MAC..." 
           />
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {[
             { key: 'ALL',     label: 'All' },
-            { key: 'ONLINE',  label: '● Online' },
-            { key: 'OFFLINE', label: '○ Offline' },
-            { key: 'AUTO',    label: '📡 Auto-Discovered' },
-            { key: 'LEARNING', label: '🧠 Learning' },
+            { key: 'ONLINE',  label: 'Online' },
+            { key: 'OFFLINE', label: 'Offline' },
+            { key: 'AUTO',    label: 'Auto-Discovered' },
+            { key: 'LEARNING', label: 'Learning' },
           ].map(({ key, label }) => (
             <button
               key={key}
               id={`filter-${key.toLowerCase()}`}
               onClick={() => setStatusFilter(key)}
-              style={{
-                padding: '6px 14px', borderRadius: '6px', border: 'none',
-                fontWeight: 600, fontSize: '12px', cursor: 'pointer',
-                background: statusFilter === key ? '#6366f1' : 'rgba(51,65,85,0.4)',
-                color: statusFilter === key ? 'white' : 'var(--text-secondary)',
-              }}>
+              className={`btn-neo ${statusFilter === key ? 'active' : ''}`}
+            >
               {label}
             </button>
           ))}
         </div>
-        <div className="filter-info">{paginated.length} of {filteredDevices.length} devices</div>
-        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-          <button
-            type="button"
-            onClick={() => setViewMode('CARDS')}
-            className="map-toggle-btn"
-            style={{
-              background: viewMode === 'CARDS' ? '#6366f1' : 'rgba(51,65,85,0.4)',
-              color: viewMode === 'CARDS' ? '#fff' : 'var(--text-secondary)',
-            }}
-          >
-            <LayoutGrid size={14} /> Cards
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('MAP')}
-            className="map-toggle-btn"
-            style={{
-              background: viewMode === 'MAP' ? '#0ea5e9' : 'rgba(51,65,85,0.4)',
-              color: viewMode === 'MAP' ? '#fff' : 'var(--text-secondary)',
-            }}
-          >
-            <MapIcon size={14} /> Topology
-          </button>
-        </div>
       </div>
 
-      {viewMode === 'MAP' ? (
-        <NetworkTopology />
-      ) : (
-        <>
-          {/* Grid */}
-          <div className="devices-grid">
+      {/* Grid */}
+      <div className="devices-grid">
             {paginated.map(device => (
               <DeviceCard
                 key={device.id}
@@ -463,8 +372,6 @@ const DevicesPage = () => {
               </button>
             </div>
           )}
-        </>
-      )}
     </div>
   );
 };

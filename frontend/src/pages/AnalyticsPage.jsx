@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { TrendingUp, TrendingDown, Activity, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
 import HistoryCharts from '../components/HistoryCharts';
 import './Pages.css';
@@ -59,7 +59,10 @@ const AnalyticsPage = () => {
       <div className="page-container">
         <div className="page-header">
           <div>
-            <h1>Analytics</h1>
+            <h1 className="btn-amber-text" data-text="Analytics" style={{ margin: 0, textTransform: 'none' }}>
+              <span className="actual-text">Analytics</span>
+              <span aria-hidden="true" className="hover-text">Analytics</span>
+            </h1>
             <p className="page-subtitle">Detailed network statistics and trends</p>
           </div>
         </div>
@@ -70,7 +73,9 @@ const AnalyticsPage = () => {
           borderRadius: '8px',
           textAlign: 'center'
         }}>
-          <p style={{ color: '#ef4444', marginBottom: '10px' }}>⚠️ {error}</p>
+          <p style={{ color: '#ef4444', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <AlertTriangle size={18} /> {error}
+          </p>
           <button onClick={fetchAnalytics} className="btn-secondary">Retry</button>
         </div>
       </div>
@@ -86,7 +91,10 @@ const AnalyticsPage = () => {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Analytics</h1>
+          <h1 className="btn-amber-text" data-text="Analytics" style={{ margin: 0, textTransform: 'none' }}>
+            <span className="actual-text">Analytics</span>
+            <span aria-hidden="true" className="hover-text">Analytics</span>
+          </h1>
           <p className="page-subtitle">Detailed network statistics and trends</p>
         </div>
       </div>

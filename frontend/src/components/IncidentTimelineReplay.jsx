@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 const EVENT_COLORS = {
-  TOP_CONSUMER_CHANGED: '#38bdf8',
-  ANOMALY_STARTED: '#ef4444',
-  DEVICE_OFFLINE: '#f59e0b',
+  TOP_CONSUMER_CHANGED: '#b6bcc6',
+  ANOMALY_STARTED: '#d8b277',
+  DEVICE_OFFLINE: '#8f949c',
 };
 
 const EVENT_LABELS = {
@@ -141,8 +141,8 @@ const IncidentTimelineReplay = ({ timeline, onReplaySnapshot }) => {
                 className={`timeline-event-dot ${dot.index === index ? 'active' : ''}`}
                 style={{
                   left: `${dot.left}%`,
-                  borderColor: `${color}aa`,
-                  background: `${color}22`,
+                  borderColor: `${color}99`,
+                  background: `${color}1f`,
                 }}
                 title={title}
               >
@@ -195,9 +195,9 @@ const IncidentTimelineReplay = ({ timeline, onReplaySnapshot }) => {
               <span
                 className="timeline-event-tag"
                 style={{
-                  background: `${EVENT_COLORS[e.type] || '#64748b'}22`,
-                  color: EVENT_COLORS[e.type] || '#94a3b8',
-                  borderColor: `${EVENT_COLORS[e.type] || '#64748b'}55`,
+                  background: `${EVENT_COLORS[e.type] || '#8f949c'}1f`,
+                  color: EVENT_COLORS[e.type] || '#a3a9b2',
+                  borderColor: `${EVENT_COLORS[e.type] || '#8f949c'}4f`,
                 }}
               >
                 {EVENT_LABELS[e.type] || e.type}

@@ -79,12 +79,16 @@ const DeviceDetailPage = () => {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
-              {device.deviceName}
-              <span className={`status-badge ${isOnline ? 'active' : 'inactive'}`} style={{ fontSize: '14px', padding: '4px 8px', alignSelf: 'center' }}>
-                {isOnline ? '● Online' : '● Offline'}
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1 className="btn-amber-text" data-text="Device Details" style={{ margin: 0, textTransform: 'none' }}>
+              <span className="actual-text">Device Details</span>
+              <span aria-hidden="true" className="hover-text">Device Details</span>
             </h1>
+            <span style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>{device.deviceName}</span>
+            <span className={`status-badge ${isOnline ? 'active' : 'inactive'}`} style={{ fontSize: '14px', padding: '4px 8px', alignSelf: 'center' }}>
+              {isOnline ? '● Online' : '● Offline'}
+            </span>
+          </div>
             <p className="page-subtitle">{device.ipAddress} • {device.macAddress}</p>
           </div>
         </div>

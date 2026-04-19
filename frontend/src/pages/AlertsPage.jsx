@@ -3,6 +3,7 @@ import axios from 'axios';
 import { ChevronLeft, ChevronRight, Search, Filter, Check, Trash2 } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { API_BASE_URL } from '../config/api';
+import AnimatedSearch from '../components/AnimatedSearch';
 import './Pages.css';
 
 const AlertsPage = () => {
@@ -108,7 +109,10 @@ const AlertsPage = () => {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Alerts</h1>
+          <h1 className="btn-amber-text" data-text="Alerts" style={{ margin: 0, textTransform: 'none' }}>
+            <span className="actual-text">Alerts</span>
+            <span aria-hidden="true" className="hover-text">Alerts</span>
+          </h1>
           <p className="page-subtitle">Network notifications and events</p>
         </div>
         <div className="header-stats">
@@ -118,27 +122,24 @@ const AlertsPage = () => {
                 await axios.put(`${API_BASE_URL}/alerts/resolve-all`);
                 fetchAlerts();
               }}
+              className="btn-sleek"
               style={{
-                background: 'rgba(34,197,94,0.12)',
-                border: '1px solid rgba(34,197,94,0.35)',
-                color: '#22c55e',
-                borderRadius: '8px',
-                fontWeight: 700,
-                padding: '10px 14px',
-                cursor: 'pointer'
+                borderColor: 'rgba(216, 178, 119, 0.38)',
+                color: '#d8b277',
+                background: 'rgba(171, 139, 84, 0.12)'
               }}
             >
               Resolve All
             </button>
           )}
-          <div className="stat">
-            <span className="stat-value" style={{ color: '#ef4444' }}>
+          <div className="stat alerts-stat-card">
+            <span className="stat-value" style={{ color: '#d8b277' }}>
               {unresolvedCount}
             </span>
             <span className="stat-label">Unresolved</span>
           </div>
-          <div className="stat">
-            <span className="stat-value" style={{ color: '#22c55e' }}>
+          <div className="stat alerts-stat-card">
+            <span className="stat-value" style={{ color: '#b6bcc6' }}>
               {alerts.filter((a) => a.isResolved).length}
             </span>
             <span className="stat-label">Resolved</span>
@@ -147,19 +148,16 @@ const AlertsPage = () => {
       </div>
 
       {/* Filters */}
-      <div className="glass-panel filters-panel">
-        <div className="filter-group">
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder="Search alerts..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
+      <div className="glass-panel filters-panel alerts-filters-panel">
+        <div className="filter-group alerts-filter-search">
+          <AnimatedSearch 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)} 
+            placeholder="Search alerts..." 
           />
         </div>
 
-        <div className="filter-group">
+        <div className="filter-group alerts-filter-select">
           <Filter size={18} />
           <select
             value={filterSeverity}
@@ -174,7 +172,7 @@ const AlertsPage = () => {
           </select>
         </div>
 
-        <div className="filter-group">
+        <div className="filter-group alerts-filter-select">
           <select
             value={filterResolved}
             onChange={(e) => setFilterResolved(e.target.value)}

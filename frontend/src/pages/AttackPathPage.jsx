@@ -280,10 +280,13 @@ const AttackPathPage = () => {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Crosshair size={30} color="#ef4444" />
-            Attack Path Graph
-          </h1>
+            <h1 className="btn-amber-text" data-text="Attack Path Graph" style={{ margin: 0, textTransform: 'none' }}>
+              <span className="actual-text">Attack Path Graph</span>
+              <span aria-hidden="true" className="hover-text">Attack Path Graph</span>
+            </h1>
+          </div>
           <p className="page-subtitle">
             Directed risk graph · Lateral movement analysis · Real-time anomaly correlation
           </p>
