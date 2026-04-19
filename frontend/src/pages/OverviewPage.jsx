@@ -4,7 +4,7 @@ import SummaryCards from '../components/SummaryCards';
 import DevicesTable from '../components/DevicesTable';
 import AlertsPanel from '../components/AlertsPanel';
 import PredictionBanner from '../components/PredictionBanner';
-import RmiDemoPanel from '../components/RmiDemoPanel';
+import IncidentTimelineReplay from '../components/IncidentTimelineReplay';
 import { useSettings } from '../context/SettingsContext';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { API_BASE_URL } from '../config/api';
@@ -17,10 +17,43 @@ const OverviewPage = () => {
   const [clusters, setClusters] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [trend, setTrend] = useState(null);
+  const [timeline, setTimeline] = useState(null);
+  const [replaySnapshot, setReplaySnapshot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toastAlert, setToastAlert] = useState(null);
 
   const { dashboardData, latestAlert, deviceUpdates, connected } = useWebSocket();
+
+  const fetchTrendData = async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/trend/analysis`);
+      setTrend(data);
+    } catch (error) {
+      console.error('Error fetching trend data:', error);
+    }
+  };
+
+  const fetchClusters = async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/trend/clusters`);
+      const clusterMap = {};
+      data.forEach((c) => {
+        clusterMap[c.deviceId] = c.cluster;
+      });
+      setClusters(clusterMap);
+    } catch (error) {
+      console.error('Error fetching cluster data:', error);
+    }
+  };
+
+  const fetchTimelineData = async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/stats/timeline?minutes=60`);
+      setTimeline(data);
+    } catch (error) {
+      console.error('Error fetching timeline data:', error);
+    }
+  };
 
   // Initial data fetch only (no interval)
   useEffect(() => {
@@ -29,7 +62,12 @@ const OverviewPage = () => {
 
   // Handle incoming WebSocket dashboard updates
   useEffect(() => {
-    if (dashboardData) setSummary(dashboardData);
+    if (dashboardData) {
+      setSummary(dashboardData);
+      // Keep trend fresh even when initial batch fetch had a transient failure.
+      fetchTrendData();
+      fetchTimelineData();
+    }
   }, [dashboardData]);
 
   // Handle incoming WebSocket alert updates (append to list & show toast)
@@ -54,31 +92,45 @@ const OverviewPage = () => {
           return [deviceUpdates, ...prevDevices];
         }
       });
+
+      fetchClusters();
     }
   }, [deviceUpdates]);
 
   const fetchDashboardData = async () => {
     try {
-      const [summaryRes, devicesRes, alertsRes, trendRes, clustersRes] = await Promise.all([
+      const [summaryRes, devicesRes, alertsRes, trendRes, clustersRes] = await Promise.allSettled([
         axios.get(`${API_BASE_URL}/stats/summary`),
         axios.get(`${API_BASE_URL}/devices/active`), // Fetch active instead of all
         axios.get(`${API_BASE_URL}/alerts`),
-        axios.get(`${API_BASE_URL}/trend/predict`),
+        axios.get(`${API_BASE_URL}/trend/analysis`),
         axios.get(`${API_BASE_URL}/trend/clusters`),
       ]);
 
-      setSummary(summaryRes.data);
-      setDevices(devicesRes.data);
-      setAlerts(alertsRes.data);
-      setTrend(trendRes.data);
+      if (summaryRes.status === 'fulfilled') {
+        setSummary(summaryRes.value.data);
+      }
+      if (devicesRes.status === 'fulfilled') {
+        setDevices(devicesRes.value.data);
+      }
+      if (alertsRes.status === 'fulfilled') {
+        setAlerts(alertsRes.value.data);
+      }
+      if (trendRes.status === 'fulfilled') {
+        setTrend(trendRes.value.data);
+      }
 
-      const clusterMap = {};
-      clustersRes.data.forEach((c) => (clusterMap[c.deviceId] = c.cluster));
-      setClusters(clusterMap);
+      if (clustersRes.status === 'fulfilled') {
+        const clusterMap = {};
+        clustersRes.value.data.forEach((c) => (clusterMap[c.deviceId] = c.cluster));
+        setClusters(clusterMap);
+      }
 
-      setLoading(false);
+      fetchTimelineData();
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -131,7 +183,12 @@ const OverviewPage = () => {
       </div>
 
       <PredictionBanner trend={trend} />
-      <SummaryCards summary={summary} />
+      <SummaryCards summary={summary} devices={devices} replay={replaySnapshot} />
+
+      <IncidentTimelineReplay
+        timeline={timeline}
+        onReplaySnapshot={setReplaySnapshot}
+      />
 
       <div className="overview-grid">
         <div className="main-charts">
@@ -141,10 +198,6 @@ const OverviewPage = () => {
         <div className="alerts-column">
           <AlertsPanel alerts={alerts} onRefresh={fetchDashboardData} />
         </div>
-      </div>
-
-      <div className="full-width-section">
-        <RmiDemoPanel />
       </div>
     </div>
   );

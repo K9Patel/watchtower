@@ -6,6 +6,7 @@ import DevicesPage from './pages/DevicesPage';
 import DeviceDetailPage from './pages/DeviceDetailPage';
 import AlertsPage from './pages/AlertsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import AttackGraphPage from './pages/AttackGraphPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -54,6 +55,11 @@ function App() {
         <Route path="/analytics" element={
           <ProtectedRoute>
             <Layout><AnalyticsPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/attack-graph" element={
+          <ProtectedRoute>
+            <Layout><AttackGraphPage /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/reports" element={

@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import { Server, Trash2, Power, Wifi, WifiOff } from 'lucide-react';
-import { API_BASE_URL } from '../config/api';
+import { Server, Brain } from 'lucide-react';
 
 // Removed vendor emoji and color mapping per user request
 
-const DevicesTable = ({ devices, clusters, onRefresh }) => {
+const DevicesTable = ({ devices, clusters }) => {
   const [filter, setFilter] = useState('ALL');
 
   const getClusterStyles = (cluster) => {
@@ -17,32 +15,14 @@ const DevicesTable = ({ devices, clusters, onRefresh }) => {
     }
   };
 
-  const getStatusColor = (status) => status === 'ONLINE' ? '#4ade80' : '#f87171';
-
-  const toggleStatus = async (id, currentStatus) => {
-    const nextStatus = currentStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
-    try {
-      await axios.put(`${API_BASE_URL}/devices/${id}/status?status=${nextStatus}`);
-      onRefresh();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const deleteDevice = async (id) => {
-    try {
-      await axios.delete(`${API_BASE_URL}/devices/${id}`);
-      onRefresh();
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const normalizeStatus = (status) => String(status || 'OFFLINE').toUpperCase();
+  const getStatusColor = (status) => normalizeStatus(status) === 'ONLINE' ? '#4ade80' : '#f87171';
 
   // Filter options: ALL, ONLINE, OFFLINE, AUTO
-  const activeDevices = devices.filter(d => d.isActive);
+  const activeDevices = devices.filter((d) => d?.isActive !== false);
   const displayDevices = filter === 'ALL'     ? activeDevices
-    : filter === 'ONLINE'  ? activeDevices.filter(d => d.status === 'ONLINE')
-    : filter === 'OFFLINE' ? activeDevices.filter(d => d.status !== 'ONLINE')
+    : filter === 'ONLINE'  ? activeDevices.filter((d) => normalizeStatus(d.status) === 'ONLINE')
+    : filter === 'OFFLINE' ? activeDevices.filter((d) => normalizeStatus(d.status) !== 'ONLINE')
     : filter === 'AUTO'    ? activeDevices.filter(d => d.isAutoDiscovered)
     : activeDevices;
 
@@ -69,23 +49,24 @@ const DevicesTable = ({ devices, clusters, onRefresh }) => {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+      <div className="devices-table-wrapper" style={{ flex: 1, overflowY: 'auto' }}>
+        <table className="devices-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--panel-border)', color: 'var(--text-secondary)' }}>
-              <th style={{ padding: '12px 8px' }}>Device</th>
-              <th style={{ padding: '12px 8px' }}>Vendor</th>
-              <th style={{ padding: '12px 8px' }}>IP Address</th>
-              <th style={{ padding: '12px 8px' }}>MAC Address</th>
-              <th style={{ padding: '12px 8px' }}>K-Means Cluster</th>
-              <th style={{ padding: '12px 8px', textAlign: 'center' }}>Status</th>
-              <th style={{ padding: '12px 8px', textAlign: 'right' }}>Actions</th>
+              <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>Device</th>
+              <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>Vendor</th>
+              <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>IP Address</th>
+              <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>MAC Address</th>
+              <th style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>K-Means Cluster</th>
+              <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>Baseline</th>
+              <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {displayDevices.map(d => {
               const cluster = clusters?.[d.id] || 'N/A';
               const cStyle  = getClusterStyles(cluster);
+              const status = normalizeStatus(d.status);
               return (
                 <tr key={d.id} style={{ borderBottom: '1px solid rgba(51, 65, 85, 0.3)', position: 'relative' }}>
                   <td style={{ padding: '12px 8px', fontWeight: 600 }}>
@@ -96,9 +77,9 @@ const DevicesTable = ({ devices, clusters, onRefresh }) => {
                           background: 'rgba(99,102,241,0.15)',
                           color: '#818cf8', padding: '2px 6px', borderRadius: '10px',
                           letterSpacing: '0.06em', flexShrink: 0,
-                        }}>📡</span>
+                        }}>AUTO</span>
                       )}
-                      {d.deviceName}
+                      {d.deviceName || 'Unnamed device'}
                     </div>
                   </td>
                   <td style={{ padding: '12px 8px' }}>
@@ -123,25 +104,38 @@ const DevicesTable = ({ devices, clusters, onRefresh }) => {
                       padding: '4px 8px', borderRadius: '4px',
                       fontSize: '11px', fontWeight: 600,
                     }}>
-                      {cluster.replace('_', ' ')}
+                      {String(cluster).replaceAll('_', ' ')}
                     </span>
                   </td>
                   <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                    <span style={{
-                      display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%',
-                      background: getStatusColor(d.status),
-                      boxShadow: `0 0 8px ${getStatusColor(d.status)}`,
-                    }} />
+                    {d.baselineReady ? (
+                      <span style={{
+                        fontSize: '10px', fontWeight: 700,
+                        background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+                        padding: '3px 8px', borderRadius: '10px',
+                      }}>✓ Ready</span>
+                    ) : (
+                      <span style={{
+                        fontSize: '10px', fontWeight: 700,
+                        background: 'rgba(168,85,247,0.15)', color: '#c084fc',
+                        padding: '3px 8px', borderRadius: '10px',
+                        display: 'inline-flex', alignItems: 'center', gap: '3px',
+                        animation: 'learningPulse 2.5s ease-in-out infinite',
+                      }}>
+                        <Brain size={10} />
+                        Learning…
+                      </span>
+                    )}
                   </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right' }}>
-                    <button onClick={() => toggleStatus(d.id, d.status)}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', marginRight: '12px', cursor: 'pointer' }}>
-                      <Power size={16} />
-                    </button>
-                    <button onClick={() => deleteDevice(d.id)}
-                      style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                      <Trash2 size={16} />
-                    </button>
+                  <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      <span style={{
+                        display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%',
+                        background: getStatusColor(status),
+                        boxShadow: `0 0 8px ${getStatusColor(status)}`,
+                      }} />
+                      {status}
+                    </span>
                   </td>
                 </tr>
               );

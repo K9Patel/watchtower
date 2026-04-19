@@ -87,4 +87,21 @@ public class Device {
      */
     @Column(name = "os_type", length = 50)
     private String osType;
+
+    // ── V6: baseline learning fields ──────────────────────────────────────────
+
+    /**
+     * TRUE once the baseline engine has accumulated enough samples (1 day of data)
+     * for meaningful anomaly scoring. Until then, AnomalyDetectionRule is DISABLED.
+     */
+    @Builder.Default
+    @Column(name = "baseline_ready", nullable = false)
+    private Boolean baselineReady = false;
+
+    /**
+     * Timestamp when the baseline learning period started for this device.
+     * Set by BaselineService on first encounter. NULL before first baseline run.
+     */
+    @Column(name = "baseline_since")
+    private LocalDateTime baselineSince;
 }

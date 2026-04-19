@@ -119,7 +119,7 @@ public class RealDataService {
                 .device(myDevice)
                 .bytesUsed(totalMB)
                 .bandwidthPercentage(pct)
-                .trafficType("REAL_TRAFFIC")
+                .trafficType(classifyTrafficType(totalMB, null, true))
                 .timestamp(LocalDateTime.now())
                 .build());
 
@@ -187,7 +187,7 @@ public class RealDataService {
                     .device(device)
                     .bytesUsed(measuredMB)
                     .bandwidthPercentage(measuredPct)
-                    .trafficType("REAL_TRAFFIC")
+                    .trafficType(classifyTrafficType(measuredMB, latencyMs, reachable))
                     .timestamp(now)
                     .build());
 
@@ -199,11 +199,31 @@ public class RealDataService {
                     .device(device)
                     .bytesUsed(0.0)
                     .bandwidthPercentage(0.0)
-                    .trafficType("REAL_TRAFFIC")
+                    .trafficType(classifyTrafficType(0.0, null, false))
                     .timestamp(now)
                     .build());
             }
         }
+    }
+
+    private String classifyTrafficType(double mbInWindow, Long latencyMs, boolean reachable) {
+        if (!reachable || mbInWindow <= 0.0) {
+            return "BROWSING";
+        }
+
+        if (mbInWindow >= 12.0) {
+            return "DOWNLOAD";
+        }
+
+        if (mbInWindow >= 4.0 && latencyMs != null && latencyMs <= 150) {
+            return "STREAMING";
+        }
+
+        if (latencyMs != null && latencyMs <= 80 && mbInWindow >= 1.0) {
+            return "GAMING";
+        }
+
+        return "BROWSING";
     }
 
     // AJT Unit 3 — Java Networking:

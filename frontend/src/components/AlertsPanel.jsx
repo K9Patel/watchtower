@@ -102,6 +102,21 @@ const AlertsPanel = ({ alerts, onRefresh }) => {
                 <span>{rec.alertType} • {rec.severity}</span>
                 {rec.device && <span>{rec.device}</span>}
               </div>
+              <div style={{ marginBottom: '6px' }}>
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  color: rec.source === 'AI' ? '#7dd3fc' : '#cbd5e1',
+                  background: rec.source === 'AI' ? 'rgba(14, 116, 144, 0.25)' : 'rgba(71, 85, 105, 0.35)',
+                  border: rec.source === 'AI' ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(148, 163, 184, 0.25)',
+                  borderRadius: '999px',
+                  padding: '2px 8px',
+                  textTransform: 'uppercase'
+                }}>
+                  {rec.source === 'AI' ? 'AI Generated' : 'Rule Fallback'}
+                </span>
+              </div>
               <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.4 }}>{rec.advice}</p>
             </div>
           ))}

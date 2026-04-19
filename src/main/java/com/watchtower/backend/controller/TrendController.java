@@ -12,8 +12,8 @@ import java.util.Map;
 /**
  * AJT REST — Trend + Predictions + Recommendations + Clustering.
  *
- * GET /api/trend/analysis      → linear regression result
- * GET /api/trend/predict       → predicted next bandwidth reading
+ * GET /api/trend/analysis      → adaptive hybrid trend analysis
+ * GET /api/trend/predict       → predicted next bandwidth reading (+ confidence)
  * GET /api/trend/recommend     → prioritised remediation advice
  * GET /api/trend/clusters      → K-Means device group assignments
  */
@@ -27,20 +27,23 @@ public class TrendController {
     private final RecommendationService recommendationService;
     private final ClusteringService     clusteringService;
 
-    // Full linear regression analysis
+    // Full adaptive analysis
     @GetMapping("/analysis")
     public Map<String, Object> getTrendAnalysis() {
         return trendService.getTrendAnalysis();
     }
 
-    // Single predicted next % (used by dashboard prediction banner)
+    // Prediction subset (used by lightweight clients)
     @GetMapping("/predict")
     public Map<String, Object> getPredictedNext() {
         Map<String, Object> analysis = trendService.getTrendAnalysis();
         return Map.of(
                 "predictedNext", analysis.get("predictedNext"),
                 "trendLabel",   analysis.get("trendLabel"),
-                "slope",        analysis.get("slope")
+                "slope",        analysis.get("slope"),
+                "confidence",   analysis.get("confidence"),
+                "model",        analysis.get("model"),
+                "dataPointCount", analysis.get("dataPointCount")
         );
     }
 

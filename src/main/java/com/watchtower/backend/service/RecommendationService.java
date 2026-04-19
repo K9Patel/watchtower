@@ -18,6 +18,7 @@ import java.util.*;
 public class RecommendationService {
 
     private final AlertRepository alertRepository;
+    private final AiRecommendationService aiRecommendationService;
 
     // Keyed by "ALERT_TYPE:SEVERITY"
     private static final Map<String, String> RULE_MAP = new LinkedHashMap<>();
@@ -44,7 +45,13 @@ public class RecommendationService {
             return List.of(Map.of(
                     "alertType", "NONE",
                     "severity",  "OK",
-                    "advice",    RULE_MAP.get("DEFAULT")));
+                    "advice",    RULE_MAP.get("DEFAULT"),
+                    "source",    "RULE"));
+        }
+
+        Optional<List<Map<String, String>>> aiResult = aiRecommendationService.generateRecommendations(openAlerts);
+        if (aiResult.isPresent()) {
+            return aiResult.get();
         }
 
         List<Map<String, String>> recommendations = new ArrayList<>();
@@ -63,7 +70,8 @@ public class RecommendationService {
                     "alertType",  alert.getAlertType(),
                     "severity",   alert.getSeverity().name(),
                     "device",     alert.getDevice().getDeviceName(),
-                    "advice",     advice));
+                    "advice",     advice,
+                    "source",     "RULE"));
         }
 
         return recommendations;

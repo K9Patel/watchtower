@@ -188,8 +188,8 @@ public class NetworkDiscoveryService {
             }
 
             // ── Detect gateway IP (local machine) and exclude from device list
-            String gatewayIp = getLocalIpAddress();
-            log.debug("NetworkDiscovery: Detected gateway IP = {}", gatewayIp);
+            String localIp = getLocalIpAddress();
+            log.debug("NetworkDiscovery: Detected local IP = {}", localIp);
 
             // ── Step 2: Run `arp -a` to get OS ARP cache + active subnet scan ─
             List<ArpEntry> entries = readArpTable();
@@ -197,17 +197,17 @@ public class NetworkDiscoveryService {
 
             // Filter out gateway from ARP entries
             List<ArpEntry> filteredEntries = entries.stream()
-                    .filter(entry -> !entry.ip().equals(gatewayIp))
+                    .filter(entry -> !entry.ip().equals(localIp))
                     .collect(java.util.stream.Collectors.toList());
             
             if (!filteredEntries.isEmpty()) {
                 log.info("NetworkDiscovery: Filtered {} entry(ies) — removed gateway {}",
-                        entries.size() - filteredEntries.size(), gatewayIp);
+                        entries.size() - filteredEntries.size(), localIp);
             }
             entries = filteredEntries;
 
             // Active subnet scan to find devices that haven't communicated yet
-            List<String> respondingIps = activeSubnetScan(currentNetworkPrefix, gatewayIp);
+            List<String> respondingIps = activeSubnetScan(currentNetworkPrefix, localIp);
             List<ArpEntry> activeDiscovered = new ArrayList<>();
             for (String ip : respondingIps) {
                 // Try to get MAC from existing ARP entries
@@ -340,17 +340,28 @@ public class NetworkDiscoveryService {
             List<Device> allDevices = deviceRepository.findAll();
             for (Device device : allDevices) {
                 if (!arpMacs.contains(device.getMacAddress())) {
-                    if (device.getIsAutoDiscovered()) {
+                    if (Boolean.TRUE.equals(device.getIsAutoDiscovered())) {
                         // Auto-discovered device has left network → delete it
                         deviceRepository.delete(device);
                         removed++;
                         log.info("NetworkDiscovery: Removed device {} (MAC {}) — left network", 
                                 device.getDeviceName(), device.getMacAddress());
                     } else {
-                        // Manually added device — just mark offline
-                        device.setStatus("OFFLINE");
-                        deviceRepository.save(device);
-                        webSocketService.pushDeviceUpdate(device);
+                        // Manually managed device: avoid false OFFLINE flips caused by ARP gaps.
+                        // Keep ONLINE if it is this machine or it was seen recently.
+                        boolean isLocalDevice = localIp != null && localIp.equals(device.getIpAddress());
+                        boolean seenRecently = device.getLastSeenAt() != null
+                                && device.getLastSeenAt().isAfter(now.minusSeconds(45));
+
+                        if (isLocalDevice || seenRecently) {
+                            continue;
+                        }
+
+                        if (!"OFFLINE".equals(device.getStatus())) {
+                            device.setStatus("OFFLINE");
+                            deviceRepository.save(device);
+                            webSocketService.pushDeviceUpdate(device);
+                        }
                     }
                 }
             }
@@ -364,7 +375,7 @@ public class NetworkDiscoveryService {
                 for (Device conflict : conflictingDevices) {
                     if (!conflict.getMacAddress().equals(entry.mac())) {
                         // Different MAC, same IP → the IP was reassigned, old device is stale
-                        if (conflict.getIsAutoDiscovered()) {
+                        if (Boolean.TRUE.equals(conflict.getIsAutoDiscovered())) {
                             log.info("NetworkDiscovery: Cleaning up stale entry — {} at {} (now on {}) ",
                                     conflict.getDeviceName(), entry.ip(), entry.mac());
                             deviceRepository.delete(conflict);
@@ -520,7 +531,7 @@ public class NetworkDiscoveryService {
      * Returns list of responding IPs. MAC addresses fetched via ARP on responders.
      */
     private List<String> activeSubnetScan(String networkPrefix, String gatewayIp) {
-        List<String> respondingIps = new ArrayList<>();
+        List<String> respondingIps = java.util.Collections.synchronizedList(new ArrayList<>());
         String[] prefixParts = networkPrefix.split("\\.");
         
         if (prefixParts.length != 3) {

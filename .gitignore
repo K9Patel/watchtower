@@ -34,3 +34,4 @@ build/
 
 # local app config (contains secrets)
 src/main/resources/application.properties
+node_modules/

@@ -1,5 +1,6 @@
 package com.watchtower.backend.service;
 
+import com.sun.jna.NativeLibrary;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -14,11 +15,14 @@ import org.pcap4j.core.PcapStat;
 import org.pcap4j.core.Pcaps;
 import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.Packet;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +36,9 @@ public class PacketCaptureService {
     private static final int SNAPLEN = 65536;
     private static final int READ_TIMEOUT_MS = 10;
 
+    @Value("${watchtower.pcap.windows-dll-dir:}")
+    private String configuredWindowsDllDir;
+
     private final Map<String, AtomicLong> bytesByIp = new ConcurrentHashMap<>();
 
     private volatile boolean captureAvailable = false;
@@ -43,6 +50,8 @@ public class PacketCaptureService {
     @PostConstruct
     public void startCapture() {
         try {
+            prepareNativeCaptureLibraryOnWindows();
+
             localIp = resolveLocalIpv4();
             localPrefix = localIp != null ? first3Octets(localIp) : null;
 
@@ -79,6 +88,67 @@ public class PacketCaptureService {
             // Typical causes on Windows: missing Npcap or insufficient privileges.
             captureAvailable = false;
             log.warn("PacketCapture: unavailable ({}). Falling back to estimator.", t.getMessage());
+        }
+    }
+
+    private void prepareNativeCaptureLibraryOnWindows() {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        if (!os.contains("win")) {
+            return;
+        }
+
+        List<String> candidates = new ArrayList<>();
+        addIfNotBlank(candidates, configuredWindowsDllDir);
+        addIfNotBlank(candidates, System.getenv("NPCAP_DIR"));
+        candidates.add("C:\\Windows\\System32\\Npcap");
+        candidates.add("C:\\Program Files\\Npcap");
+        candidates.add("C:\\Program Files (x86)\\Npcap");
+        candidates.add("C:\\Program Files\\WinPcap");
+        candidates.add("C:\\Program Files (x86)\\WinPcap");
+
+        for (String dir : candidates) {
+            if (!hasPcapDlls(dir)) {
+                continue;
+            }
+
+            NativeLibrary.addSearchPath("wpcap", dir);
+            NativeLibrary.addSearchPath("Packet", dir);
+            appendSystemPropertyPath("jna.library.path", dir);
+
+            log.info("PacketCapture: configured native library search path: {}", dir);
+            return;
+        }
+
+        log.warn("PacketCapture: no Windows Npcap/WinPcap DLL directory found. "
+                + "Install Npcap with WinPcap API-compatible mode or set watchtower.pcap.windows-dll-dir.");
+    }
+
+    private void appendSystemPropertyPath(String property, String dir) {
+        String current = System.getProperty(property, "");
+        if (current.contains(dir)) {
+            return;
+        }
+        if (current.isBlank()) {
+            System.setProperty(property, dir);
+        } else {
+            System.setProperty(property, current + File.pathSeparator + dir);
+        }
+    }
+
+    private boolean hasPcapDlls(String dir) {
+        if (dir == null || dir.isBlank()) {
+            return false;
+        }
+        File folder = new File(dir);
+        if (!folder.isDirectory()) {
+            return false;
+        }
+        return new File(folder, "wpcap.dll").isFile();
+    }
+
+    private void addIfNotBlank(List<String> items, String value) {
+        if (value != null && !value.isBlank()) {
+            items.add(value.trim());
         }
     }
 

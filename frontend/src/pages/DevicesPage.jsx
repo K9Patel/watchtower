@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Search, Wifi, WifiOff, Radar, RefreshCw,
-  Monitor, ChevronLeft, ChevronRight, Clock
+  Monitor, ChevronLeft, ChevronRight, Clock, Brain
 } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
 import './Pages.css';
@@ -108,7 +108,7 @@ function ScanBanner({ scanStatus, onScanNow }) {
 function StatsPills({ devices, scanStatus }) {
   const online    = devices.filter(d => d.status === 'ONLINE').length;
   const autoDisc  = devices.filter(d => d.isAutoDiscovered).length;
-  const manual    = devices.filter(d => !d.isAutoDiscovered).length;
+  const learning  = devices.filter(d => !d.baselineReady).length;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '14px', marginBottom: '24px' }}>
@@ -117,6 +117,7 @@ function StatsPills({ devices, scanStatus }) {
         { label: 'Online Now',     value: online,          color: '#22c55e', icon: <Wifi size={16}/> },
         { label: 'Offline',        value: devices.length - online, color: '#6b7280', icon: <WifiOff size={16}/> },
         { label: 'Auto-Discovered',value: autoDisc,        color: '#f59e0b', icon: <Radar size={16}/> },
+        { label: 'Learning',       value: learning,        color: '#a855f7', icon: <Brain size={16}/> },
       ].map(({ label, value, color, icon }) => (
         <div key={label} className="glass-panel" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ width: 36, height: 36, borderRadius: '9px', background: `${color}18`, color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -137,6 +138,7 @@ function StatsPills({ devices, scanStatus }) {
 ───────────────────────────────────────────────────────────── */
 function DeviceCard({ device, onClick }) {
   const isOnline  = device.status === 'ONLINE' && device.isActive;
+  const isLearning = !device.baselineReady;
   // "NEW" = auto-discovered and first seen within the last 90 seconds
   const isNew = device.isAutoDiscovered &&
     device.lastSeenAt &&
@@ -156,18 +158,17 @@ function DeviceCard({ device, onClick }) {
       {/* Generic accent bar */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: `linear-gradient(90deg,#4b5563,#9ca3af)` }} />
 
-      {/* NEW badge */}
-      {isNew && (
-        <div style={{
-          position: 'absolute', top: '10px', right: '10px',
-          background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-          color: 'white', fontSize: '9px', fontWeight: 800,
-          padding: '2px 8px', borderRadius: '20px', letterSpacing: '0.1em',
-          animation: 'newPulse 2s ease-in-out infinite', zIndex: 2,
-        }}>★ NEW</div>
-      )}
+      <div className="device-card-top-tags">
+        {isNew && <span className="device-pill device-pill-new">★ New</span>}
+        {isLearning && (
+          <span className="device-pill device-pill-learning">
+            <Brain size={11} />
+            Learning Baseline
+          </span>
+        )}
+      </div>
 
-      <div className="device-header" style={{ marginTop: '14px', paddingRight: '130px' }}>
+      <div className="device-header" style={{ marginTop: '14px', paddingRight: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
           {/* Avatar */}
           <div style={{
@@ -188,10 +189,8 @@ function DeviceCard({ device, onClick }) {
         <span
           className={`status-badge ${isOnline ? 'active' : 'inactive'}`}
           style={{
-            position: 'absolute',
-            right: '14px',
-            top: isNew ? '50px' : '14px',
-            zIndex: 2,
+            alignSelf: 'flex-start',
+            marginTop: '4px',
           }}
         >
           {isOnline ? '● Online' : '○ Offline'}
@@ -313,6 +312,7 @@ const DevicesPage = () => {
     if (statusFilter === 'ONLINE')       f = f.filter(d => d.status === 'ONLINE');
     else if (statusFilter === 'OFFLINE') f = f.filter(d => d.status !== 'ONLINE');
     else if (statusFilter === 'AUTO')    f = f.filter(d => d.isAutoDiscovered);
+    else if (statusFilter === 'LEARNING') f = f.filter(d => !d.baselineReady);
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       f = f.filter(d =>
@@ -382,6 +382,7 @@ const DevicesPage = () => {
             { key: 'ONLINE',  label: '● Online' },
             { key: 'OFFLINE', label: '○ Offline' },
             { key: 'AUTO',    label: '📡 Auto-Discovered' },
+            { key: 'LEARNING', label: '🧠 Learning' },
           ].map(({ key, label }) => (
             <button
               key={key}

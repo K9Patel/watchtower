@@ -110,14 +110,15 @@ public class AnalysisService {
 
         double totalLoad = getTotalLoad();
         Optional<Device> topConsumer = getTopConsumer();
-        long onlineCount = deviceRepository.findByIsActiveTrue().stream()
+        List<Device> activeDevices = deviceRepository.findByIsActiveTrue();
+        long onlineCount = activeDevices.stream()
                 .filter(d -> "ONLINE".equals(d.getStatus()))
                 .count();
 
         summary.put("totalLoadPercent", Math.round(totalLoad * 100.0) / 100.0);
         summary.put("topConsumer", topConsumer.map(Device::getDeviceName).orElse("N/A"));
         summary.put("onlineDevices", onlineCount);
-        summary.put("totalDevices", deviceRepository.count());
+        summary.put("totalDevices", activeDevices.size());
         summary.put("trafficBreakdown", getTrafficBreakdown());
         summary.put("bandwidthShare", getBandwidthSharePerDevice());
         // AJT: dynamically read active profile instead of hardcoding

@@ -5,6 +5,7 @@ import com.watchtower.backend.entity.UsageLog;
 import com.watchtower.backend.repository.DeviceRepository;
 import com.watchtower.backend.repository.UsageLogRepository;
 import com.watchtower.backend.service.AnalysisService;
+import com.watchtower.backend.service.BaselineService;
 import com.watchtower.backend.service.DeviceDetailService;
 import com.watchtower.backend.service.MacVendorService;
 import com.watchtower.backend.service.NetworkDiscoveryService;
@@ -30,6 +31,7 @@ public class DeviceController {
     private final com.watchtower.backend.service.DashboardWebSocketService webSocketService;
     private final MacVendorService macVendorService;
     private final UsageLogRepository usageLogRepository;
+    private final BaselineService baselineService;
 
     // ==========================================================================
     //  Existing CRUD endpoints — unchanged
@@ -80,17 +82,12 @@ public class DeviceController {
         return ResponseEntity.ok(saved);
     }
 
-    /** PUT /api/devices/{id}/status — toggle online/offline */
+    /** PUT /api/devices/{id}/status — disabled: status is discovery-managed */
     @PutMapping("/{id}/status")
     public ResponseEntity<Device> updateStatus(
             @PathVariable Long id,
             @RequestParam String status) {
-        return deviceRepository.findById(id).map(device -> {
-            device.setStatus(status.toUpperCase());
-            Device saved = deviceRepository.save(device);
-            webSocketService.pushDeviceUpdate(saved);
-            return ResponseEntity.ok(saved);
-        }).orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.status(405).build();
     }
 
     /**
@@ -100,7 +97,7 @@ public class DeviceController {
      */
     @GetMapping("/live")
     public List<Map<String, Object>> getLiveDevices() {
-        List<Device> allDevices = deviceRepository.findAll();
+        List<Device> allDevices = deviceRepository.findByIsActiveTrue();
 
         Map<Long, Double> mbpsByDeviceId = new HashMap<>();
         double totalMbps = 0.0;
@@ -132,6 +129,8 @@ public class DeviceController {
                     info.put("isAutoDiscovered",  device.getIsAutoDiscovered());
                     info.put("lastSeenAt",        device.getLastSeenAt());
                     info.put("registeredAt",      device.getRegisteredAt());
+                    info.put("baselineReady",     device.getBaselineReady());
+                    info.put("baselineSince",     device.getBaselineSince());
                     info.put("bandwidth",         bandwidthPercent);
                     info.put("bandwidthMbps",     Math.round(bandwidthMbps * 100.0) / 100.0);
                     return info;
@@ -147,12 +146,29 @@ public class DeviceController {
                 .collect(Collectors.toList());
     }
 
-    /** DELETE /api/devices/{id} — hard-delete */
+    /** DELETE /api/devices/{id} — disabled: devices are discovery-managed */
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deactivateDevice(@PathVariable Long id) {
+        return ResponseEntity.status(405).body(Map.of(
+                "message", "Manual delete is disabled. Devices are managed by live discovery."
+        ));
+    }
+
+    /**
+     * GET /api/devices/{id}/baseline
+     * Returns per-hour baseline data for the device detail page chart overlay.
+     * Each entry: { hour, avgBandwidth, stddevBandwidth, sampleCount, upperBound, lowerBound }
+     */
+    @GetMapping("/{id}/baseline")
+    public ResponseEntity<Map<String, Object>> getDeviceBaseline(@PathVariable Long id) {
         return deviceRepository.findById(id).map(device -> {
-            deviceRepository.delete(device);
-            return ResponseEntity.ok(Map.of("message", "Device deleted"));
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("deviceId", device.getId());
+            response.put("deviceName", device.getDeviceName());
+            response.put("baselineReady", device.getBaselineReady());
+            response.put("baselineSince", device.getBaselineSince());
+            response.put("baselines", baselineService.getBaselineForDevice(id));
+            return ResponseEntity.ok(response);
         }).orElse(ResponseEntity.notFound().build());
     }
 

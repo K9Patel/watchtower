@@ -19,6 +19,9 @@ public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
     // DiagnosisEngine: all logs from last 60s for rule evaluation
     List<UsageLog> findByTimestampAfter(LocalDateTime timestamp);
 
+       // Timeline replay: ordered stream of logs within a rolling window
+       List<UsageLog> findByTimestampAfterOrderByTimestampAsc(LocalDateTime timestamp);
+
     // NetworkMonitorService: logs for ONE device in last 60s (Mbps calc)
     List<UsageLog> findByDeviceAndTimestampAfter(Device device, LocalDateTime timestamp);
 

@@ -1,5 +1,5 @@
 -- ================================================================
---  WatchTower — V5 Authentication Schema
+--  WatchTower — V10 Authentication Schema
 --  Creates users + password_reset_tokens tables for JWT auth
 -- ================================================================
 
@@ -27,4 +27,4 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     created_at  TIMESTAMP       NOT NULL DEFAULT NOW()
 );
 
--- ── END V5 ──────────────────────────────────────────────────
+-- ── END V10 ─────────────────────────────────────────────────

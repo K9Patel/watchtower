@@ -1,6 +1,7 @@
 package com.watchtower.backend.controller;
 
 import com.watchtower.backend.service.AnalysisService;
+import com.watchtower.backend.service.IncidentTimelineService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.Map;
 public class StatsController {
 
     private final AnalysisService analysisService;
+    private final IncidentTimelineService incidentTimelineService;
     private final Environment environment;
 
     // GET /api/stats/summary — main dashboard card data
@@ -54,5 +56,13 @@ public class StatsController {
                 "profile", "real",
                 "label",   "🟢 LIVE"
         );
+    }
+
+    // GET /api/stats/timeline?minutes=60 — minute-by-minute replay snapshots + events
+    @GetMapping("/timeline")
+    public Map<String, Object> getTimelineReplay(
+            @RequestParam(defaultValue = "60") int minutes
+    ) {
+        return incidentTimelineService.buildTimeline(minutes);
     }
 }

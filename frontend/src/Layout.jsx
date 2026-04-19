@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Activity, BarChart3, FileText, Settings, Menu, X, Home, AlertCircle, LogOut, User } from 'lucide-react';
+import { Activity, BarChart3, FileText, Settings, Menu, X, Home, AlertCircle, LogOut, User, GitBranch } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { logoutApi } from './config/authApi';
 import { API_BASE_URL } from './config/api';
@@ -34,6 +34,7 @@ const Layout = ({ children }) => {
     { path: '/devices', label: 'Devices', icon: Activity },
     { path: '/alerts', label: 'Alerts', icon: AlertCircle },
     { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { path: '/attack-graph', label: 'Attack Graph', icon: GitBranch },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];

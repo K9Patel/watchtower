@@ -29,4 +29,7 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
 
     // Dashboard navbar badge: count of open alerts
     long countByIsResolvedFalse();
+
+    // Timeline replay: ordered alerts from a rolling window
+    List<Alert> findByCreatedAtAfterOrderByCreatedAtAsc(java.time.LocalDateTime since);
 }

@@ -194,7 +194,11 @@ const AlertsPage = () => {
       {/* Alerts List */}
       <div className="alerts-list">
         {paginatedAlerts.map((alert) => (
-          <div key={alert.id} className="alert-item" style={{ borderLeftColor: getSeverityColor(alert.severity) }}>
+          <div
+            key={alert.id}
+            className={`alert-item ${alert.isResolved ? 'resolved' : ''}`}
+            style={{ borderLeftColor: getSeverityColor(alert.severity) }}
+          >
             <div className="alert-content">
               <div className="alert-header">
                 <h3 className="alert-severity">{alert.severity}</h3>
