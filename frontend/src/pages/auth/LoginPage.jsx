@@ -84,8 +84,9 @@ const LoginPage = () => {
         </div>
         <p className="auth-subtitle">Sign in to your account</p>
 
-
-        {error && <div className="auth-alert auth-alert-error">⚠ {error}</div>}
+        <div className="auth-feedback-slot">
+          {error ? <div className="auth-alert auth-alert-error">⚠ {error}</div> : <div className="auth-feedback-placeholder" aria-hidden="true"></div>}
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div className="auth-form-group auth-float">

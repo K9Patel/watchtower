@@ -100,8 +100,9 @@ const SignupPage = () => {
         </div>
         <p className="auth-subtitle">Create your account</p>
 
-
-        {error && <div className="auth-alert auth-alert-error">⚠ {error}</div>}
+        <div className="auth-feedback-slot">
+          {error ? <div className="auth-alert auth-alert-error">⚠ {error}</div> : <div className="auth-feedback-placeholder" aria-hidden="true"></div>}
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div className="auth-form-group auth-float">
@@ -145,16 +146,14 @@ const SignupPage = () => {
               minLength={8}
             />
             <label htmlFor="signup-password">Password</label>
-            {form.password && (
-              <>
-                <div className="password-strength">
-                  {[1,2,3,4].map(i => (
-                    <div key={i} className={`strength-bar ${i <= strength.score ? `active ${strength.className}` : ''}`} />
-                  ))}
-                </div>
-                <div className="strength-text">{strength.label}</div>
-              </>
-            )}
+            <div className={`password-strength-wrap ${form.password ? 'is-visible' : ''}`}>
+              <div className="password-strength">
+                {[1,2,3,4].map(i => (
+                  <div key={i} className={`strength-bar ${i <= strength.score ? `active ${strength.className}` : ''}`} />
+                ))}
+              </div>
+              <div className="strength-text">{form.password ? strength.label : ' '}</div>
+            </div>
           </div>
 
           <div className="auth-form-group auth-float">
