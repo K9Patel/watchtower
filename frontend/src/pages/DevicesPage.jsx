@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Search, Wifi, WifiOff, Radar, RefreshCw,
-  Monitor, ChevronLeft, ChevronRight, Clock, Brain
+  Monitor, ChevronLeft, ChevronRight, Clock, Brain, Map as MapIcon, LayoutGrid
 } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
+import NetworkTopology from '../components/NetworkTopology';
 import './Pages.css';
 
 function timeAgo(isoString) {
@@ -276,6 +277,7 @@ const DevicesPage = () => {
   const [searchTerm,      setSearchTerm]       = useState('');
   const [statusFilter,    setStatusFilter]     = useState('ALL');
   const [currentPage,     setCurrentPage]      = useState(1);
+  const [viewMode,        setViewMode]         = useState('CARDS');
   const pollRef = useRef(null);
   const ITEMS   = 12;
 
@@ -399,39 +401,69 @@ const DevicesPage = () => {
           ))}
         </div>
         <div className="filter-info">{paginated.length} of {filteredDevices.length} devices</div>
-      </div>
-
-      {/* Grid */}
-      <div className="devices-grid">
-        {paginated.map(device => (
-          <DeviceCard
-            key={device.id}
-            device={device}
-            onClick={() => navigate(`/devices/${device.id}`)}
-          />
-        ))}
-      </div>
-
-      {filteredDevices.length === 0 && (
-        <div className="empty-state">
-          <Radar size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-          <p>No devices found. Try scanning the network.</p>
-          <button onClick={handleScanNow} className="btn-primary" style={{ marginTop: '16px' }}>
-            Scan Now
+        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+          <button
+            type="button"
+            onClick={() => setViewMode('CARDS')}
+            className="map-toggle-btn"
+            style={{
+              background: viewMode === 'CARDS' ? '#6366f1' : 'rgba(51,65,85,0.4)',
+              color: viewMode === 'CARDS' ? '#fff' : 'var(--text-secondary)',
+            }}
+          >
+            <LayoutGrid size={14} /> Cards
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('MAP')}
+            className="map-toggle-btn"
+            style={{
+              background: viewMode === 'MAP' ? '#0ea5e9' : 'rgba(51,65,85,0.4)',
+              color: viewMode === 'MAP' ? '#fff' : 'var(--text-secondary)',
+            }}
+          >
+            <MapIcon size={14} /> Topology
           </button>
         </div>
-      )}
+      </div>
 
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="pagination-btn">
-            <ChevronLeft size={18} /> Previous
-          </button>
-          <div className="pagination-info">Page {currentPage} of {totalPages}</div>
-          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="pagination-btn">
-            Next <ChevronRight size={18} />
-          </button>
-        </div>
+      {viewMode === 'MAP' ? (
+        <NetworkTopology />
+      ) : (
+        <>
+          {/* Grid */}
+          <div className="devices-grid">
+            {paginated.map(device => (
+              <DeviceCard
+                key={device.id}
+                device={device}
+                onClick={() => navigate(`/devices/${device.id}`)}
+              />
+            ))}
+          </div>
+
+          {filteredDevices.length === 0 && (
+            <div className="empty-state">
+              <Radar size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+              <p>No devices found. Try scanning the network.</p>
+              <button onClick={handleScanNow} className="btn-primary" style={{ marginTop: '16px' }}>
+                Scan Now
+              </button>
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="pagination-btn">
+                <ChevronLeft size={18} /> Previous
+              </button>
+              <div className="pagination-info">Page {currentPage} of {totalPages}</div>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="pagination-btn">
+                Next <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

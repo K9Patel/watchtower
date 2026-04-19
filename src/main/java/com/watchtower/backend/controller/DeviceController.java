@@ -1,7 +1,10 @@
 package com.watchtower.backend.controller;
 
 import com.watchtower.backend.entity.Device;
+import com.watchtower.backend.entity.DeviceGeolocation;
 import com.watchtower.backend.entity.UsageLog;
+import com.watchtower.backend.repository.AlertRepository;
+import com.watchtower.backend.repository.DeviceGeolocationRepository;
 import com.watchtower.backend.repository.DeviceRepository;
 import com.watchtower.backend.repository.UsageLogRepository;
 import com.watchtower.backend.service.AnalysisService;
@@ -15,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,6 +36,9 @@ public class DeviceController {
     private final MacVendorService macVendorService;
     private final UsageLogRepository usageLogRepository;
     private final BaselineService baselineService;
+    private final DeviceGeolocationRepository deviceGeolocationRepository;
+    private final com.watchtower.backend.service.GeoLocationService geoLocationService;
+    private final AlertRepository alertRepository;
 
     // ==========================================================================
     //  Existing CRUD endpoints — unchanged
@@ -98,6 +105,10 @@ public class DeviceController {
     @GetMapping("/live")
     public List<Map<String, Object>> getLiveDevices() {
         List<Device> allDevices = deviceRepository.findByIsActiveTrue();
+        Map<Long, DeviceGeolocation> geoByDeviceId = deviceGeolocationRepository
+            .findAllByDeviceIdIn(allDevices.stream().map(Device::getId).toList())
+            .stream()
+            .collect(Collectors.toMap(g -> g.getDevice().getId(), g -> g));
 
         Map<Long, Double> mbpsByDeviceId = new HashMap<>();
         double totalMbps = 0.0;
@@ -116,6 +127,13 @@ public class DeviceController {
                     double bandwidthPercent = totalMbpsSnapshot > 0
                         ? Math.round((bandwidthMbps / totalMbpsSnapshot) * 10000.0) / 100.0
                             : 0.0;
+                    DeviceGeolocation geo = geoByDeviceId.get(device.getId());
+                    String locationLabel = geo != null
+                            ? List.of(geo.getCityName(), geo.getRegionName(), geo.getCountryName()).stream()
+                                .filter(Objects::nonNull)
+                                .filter(v -> !v.isBlank())
+                                .collect(Collectors.joining(", "))
+                            : null;
 
                     Map<String, Object> info = new LinkedHashMap<>();
                     info.put("id",               device.getId());
@@ -133,6 +151,13 @@ public class DeviceController {
                     info.put("baselineSince",     device.getBaselineSince());
                     info.put("bandwidth",         bandwidthPercent);
                     info.put("bandwidthMbps",     Math.round(bandwidthMbps * 100.0) / 100.0);
+                    info.put("location",          locationLabel);
+                    info.put("city",              geo != null ? geo.getCityName() : null);
+                    info.put("region",            geo != null ? geo.getRegionName() : null);
+                    info.put("country",           geo != null ? geo.getCountryName() : null);
+                    info.put("lat",               geo != null ? geo.getLatitude() : null);
+                    info.put("lng",               geo != null ? geo.getLongitude() : null);
+                    info.put("isPrivateGeo",      geo != null ? geo.getIsPrivate() : null);
                     return info;
                 })
                 .sorted((a, b) -> {
@@ -144,6 +169,110 @@ public class DeviceController {
                     return bandB.compareTo(bandA);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * GET /api/devices/map
+     * Returns active devices with geolocation + bandwidth for map visualization.
+     */
+    @GetMapping("/map")
+    public List<Map<String, Object>> getDevicesMap() {
+        List<Device> devices = deviceRepository.findByIsActiveTrue();
+        Map<Long, DeviceGeolocation> geoByDeviceId = deviceGeolocationRepository
+                .findAllByDeviceIdIn(devices.stream().map(Device::getId).toList())
+                .stream()
+                .collect(Collectors.toMap(g -> g.getDevice().getId(), g -> g));
+
+        Map<Long, Long> unresolvedAlertsByDevice = alertRepository.findByIsResolvedFalseOrderByCreatedAtDesc()
+                .stream()
+                .collect(Collectors.groupingBy(a -> a.getDevice().getId(), Collectors.counting()));
+
+        return devices.stream().map(device -> {
+            Optional<UsageLog> latestLog = usageLogRepository.findTopByDeviceOrderByTimestampDesc(device);
+            double bandwidthMbps = latestLog.map(log -> (log.getBytesUsed() * 8.0) / 10.0).orElse(0.0);
+
+            DeviceGeolocation geo = geoByDeviceId.get(device.getId());
+            int geoConfidence = computeGeoConfidence(geo);
+            String locationLabel = geo != null
+                    ? List.of(geo.getCityName(), geo.getRegionName(), geo.getCountryName()).stream()
+                        .filter(Objects::nonNull)
+                        .filter(v -> !v.isBlank())
+                        .collect(Collectors.joining(", "))
+                    : null;
+
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", device.getId());
+            item.put("deviceName", device.getDeviceName());
+            item.put("ipAddress", device.getIpAddress());
+            item.put("vendorName", device.getVendorName());
+            item.put("status", device.getStatus());
+            item.put("isAutoDiscovered", device.getIsAutoDiscovered());
+            item.put("baselineReady", device.getBaselineReady());
+            item.put("bandwidthMbps", Math.round(bandwidthMbps * 100.0) / 100.0);
+            item.put("unresolvedAlerts", unresolvedAlertsByDevice.getOrDefault(device.getId(), 0L));
+            item.put("city", geo != null ? geo.getCityName() : null);
+            item.put("region", geo != null ? geo.getRegionName() : null);
+            item.put("country", geo != null ? geo.getCountryName() : null);
+            item.put("location", locationLabel);
+            item.put("lat", geo != null ? geo.getLatitude() : null);
+            item.put("lng", geo != null ? geo.getLongitude() : null);
+            item.put("isPrivateGeo", geo != null ? geo.getIsPrivate() : null);
+            item.put("geoSource", geo != null ? geo.getSource() : null);
+            item.put("geoSourceLabel", computeGeoSourceLabel(geo));
+            item.put("geoConfidence", geoConfidence);
+            item.put("geoQuality", geoConfidence >= 75 ? "HIGH" : geoConfidence >= 50 ? "MEDIUM" : "LOW");
+            item.put("geoAccuracyKm", geo == null ? null : Boolean.TRUE.equals(geo.getIsPrivate()) ? 8.0 : 2.5);
+            item.put("geoUpdatedAt", geo != null ? geo.getLastUpdated() : null);
+            return item;
+        }).toList();
+    }
+
+    private String computeGeoSourceLabel(DeviceGeolocation geo) {
+        if (geo == null) return "Estimated from local topology";
+        if (Boolean.TRUE.equals(geo.getIsPrivate())) return "Private LAN IP mapped via gateway city";
+        if ("MANUAL".equalsIgnoreCase(geo.getSource())) return "Manual verified location";
+        return "Public IP geolocation";
+    }
+
+    private int computeGeoConfidence(DeviceGeolocation geo) {
+        if (geo == null || geo.getLatitude() == null || geo.getLongitude() == null) {
+            return 25;
+        }
+
+        int score = Boolean.TRUE.equals(geo.getIsPrivate()) ? 45 : 68;
+
+        if (geo.getLastUpdated() != null) {
+            long ageHours = ChronoUnit.HOURS.between(geo.getLastUpdated(), LocalDateTime.now());
+            if (ageHours <= 6) score += 12;
+            else if (ageHours <= 24) score += 7;
+            else if (ageHours > 168) score -= 8;
+        }
+
+        if ("MANUAL".equalsIgnoreCase(geo.getSource())) score += 15;
+        if ((geo.getCityName() == null || geo.getCityName().isBlank()) &&
+            (geo.getRegionName() == null || geo.getRegionName().isBlank())) {
+            score -= 10;
+        }
+
+        return Math.max(15, Math.min(score, 95));
+    }
+
+    /**
+     * POST /api/devices/{id}/locate
+     * Forces a fresh IP-to-location lookup.
+     */
+    @PostMapping("/{id}/locate")
+    public ResponseEntity<Map<String, Object>> relocateDevice(@PathVariable Long id) {
+        return deviceRepository.findById(id)
+                .map(device -> {
+                    Optional<DeviceGeolocation> geo = geoLocationService.locateAndSave(id, true);
+                    Map<String, Object> payload = new LinkedHashMap<>();
+                    payload.put("deviceId", id);
+                    payload.put("updated", geo.isPresent());
+                    payload.put("message", geo.isPresent() ? "Device location updated." : "Location lookup failed.");
+                    return ResponseEntity.ok(payload);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     /** DELETE /api/devices/{id} — disabled: devices are discovery-managed */

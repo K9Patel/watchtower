@@ -18,8 +18,10 @@
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.0",
     "react-force-graph-2d": "^1.29.1",
+    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.13.2",
-    "sockjs-client": "^1.6.1"
+    "sockjs-client": "^1.6.1",
+    "leaflet": "^1.9.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

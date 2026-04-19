@@ -1,5 +1,6 @@
 import React from 'react';
 import AttackPathGraph from '../components/AttackPathGraph';
+import NetworkTopology from '../components/NetworkTopology';
 import './Pages.css';
 
 const AttackGraphPage = () => {
@@ -13,6 +14,7 @@ const AttackGraphPage = () => {
       </div>
 
       <AttackPathGraph />
+      <NetworkTopology />
     </div>
   );
 };

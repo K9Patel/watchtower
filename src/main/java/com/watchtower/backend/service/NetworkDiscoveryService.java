@@ -66,6 +66,7 @@ public class NetworkDiscoveryService {
     private final DeviceRepository deviceRepository;
     private final DashboardWebSocketService webSocketService;
     private final MacVendorService macVendorService;
+    private final GeoLocationService geoLocationService;
     private final ApplicationEventPublisher eventPublisher;
 
     // Stores the most recent scan result — served by GET /api/devices/scan/status
@@ -79,10 +80,12 @@ public class NetworkDiscoveryService {
             DeviceRepository deviceRepository,
             DashboardWebSocketService webSocketService,
             MacVendorService macVendorService,
+            GeoLocationService geoLocationService,
             ApplicationEventPublisher eventPublisher) {
         this.deviceRepository = deviceRepository;
         this.webSocketService = webSocketService;
         this.macVendorService = macVendorService;
+        this.geoLocationService = geoLocationService;
         this.eventPublisher = eventPublisher;
     }
 
@@ -261,10 +264,12 @@ public class NetworkDiscoveryService {
                     // ── KNOWN device: refresh status based on ping result
                     Device device = existing.get();
                     boolean changed = false;
+                    boolean ipChanged = false;
 
                     if (!entry.ip().equals(device.getIpAddress())) {
                         device.setIpAddress(entry.ip());
                         changed = true;
+                        ipChanged = true;
                     }
                     
                     // Only update hostname if we got a real DNS result
@@ -294,6 +299,9 @@ public class NetworkDiscoveryService {
                     }
                     device.setIsActive(true);
                     deviceRepository.save(device);
+                    if (ipChanged) {
+                        geoLocationService.locateAndSaveAsync(device, true);
+                    }
                     webSocketService.pushDeviceUpdate(device);
                     discovered.add(device);
                     if (changed) updatedCount++;
@@ -326,6 +334,7 @@ public class NetworkDiscoveryService {
                             .build();
 
                     deviceRepository.save(newDevice);
+                            geoLocationService.locateAndSaveAsync(newDevice, true);
                     webSocketService.pushDeviceUpdate(newDevice);
                     discovered.add(newDevice);
                     newCount++;
