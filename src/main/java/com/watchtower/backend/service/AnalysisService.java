@@ -29,11 +29,22 @@ public class AnalysisService {
     private final Environment environment;
     private final com.watchtower.backend.repository.AlertRepository alertRepository;
 
+    private LocalDateTime applyScopeStart(LocalDateTime defaultSince, LocalDateTime scopeStart) {
+        if (scopeStart == null) {
+            return defaultSince;
+        }
+        return scopeStart.isAfter(defaultSince) ? scopeStart : defaultSince;
+    }
+
     // AJT — Java Streams + Lambdas:
     // Reads last 60s of logs, calculates total network load %
     public double getTotalLoad() {
-        List<UsageLog> recent = usageLogRepository
-                                .findByTimestampAfter(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS));
+        return getTotalLoad(null);
+    }
+
+    public double getTotalLoad(LocalDateTime scopeStart) {
+        LocalDateTime since = applyScopeStart(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS), scopeStart);
+        List<UsageLog> recent = usageLogRepository.findByTimestampAfter(since);
 
         if (recent.isEmpty())
             return 0.0;
@@ -49,8 +60,13 @@ public class AnalysisService {
     // Finds the device consuming the most bandwidth right now
     @Transactional(readOnly = true)
     public Optional<Device> getTopConsumer() {
-        List<UsageLog> recent = usageLogRepository
-                                .findByTimestampAfter(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS));
+        return getTopConsumer(null);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Device> getTopConsumer(LocalDateTime scopeStart) {
+        LocalDateTime since = applyScopeStart(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS), scopeStart);
+        List<UsageLog> recent = usageLogRepository.findByTimestampAfter(since);
 
         if (recent.isEmpty())
             return Optional.empty();
@@ -69,8 +85,12 @@ public class AnalysisService {
     // Counts how many logs of each traffic type in last 60s
     // Returns: {"STREAMING": 8, "BROWSING": 12, "GAMING": 3, ...}
     public Map<String, Long> getTrafficBreakdown() {
-        List<UsageLog> recent = usageLogRepository
-                                .findByTimestampAfter(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS));
+        return getTrafficBreakdown(null);
+    }
+
+    public Map<String, Long> getTrafficBreakdown(LocalDateTime scopeStart) {
+        LocalDateTime since = applyScopeStart(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS), scopeStart);
+        List<UsageLog> recent = usageLogRepository.findByTimestampAfter(since);
 
         return recent.stream()
                 .collect(Collectors.groupingBy(
@@ -82,8 +102,13 @@ public class AnalysisService {
     // Calculates what % of total bandwidth each device is using
     @Transactional(readOnly = true)
     public Map<String, Double> getBandwidthSharePerDevice() {
-        List<UsageLog> recent = usageLogRepository
-                                .findByTimestampAfter(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS));
+        return getBandwidthSharePerDevice(null);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Double> getBandwidthSharePerDevice(LocalDateTime scopeStart) {
+        LocalDateTime since = applyScopeStart(LocalDateTime.now().minusSeconds(SNAPSHOT_SECONDS), scopeStart);
+        List<UsageLog> recent = usageLogRepository.findByTimestampAfter(since);
 
         if (recent.isEmpty())
             return Collections.emptyMap();
@@ -106,10 +131,15 @@ public class AnalysisService {
     // Full summary object — used by StatsController GET /api/stats/summary
     @Transactional(readOnly = true)
     public Map<String, Object> getFullSummary() {
+        return getFullSummary(null);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getFullSummary(LocalDateTime scopeStart) {
         Map<String, Object> summary = new LinkedHashMap<>();
 
-        double totalLoad = getTotalLoad();
-        Optional<Device> topConsumer = getTopConsumer();
+        double totalLoad = getTotalLoad(scopeStart);
+        Optional<Device> topConsumer = getTopConsumer(scopeStart);
         List<Device> activeDevices = deviceRepository.findByIsActiveTrue();
         long onlineCount = activeDevices.stream()
                 .filter(d -> "ONLINE".equals(d.getStatus()))
@@ -119,8 +149,8 @@ public class AnalysisService {
         summary.put("topConsumer", topConsumer.map(Device::getDeviceName).orElse("N/A"));
         summary.put("onlineDevices", onlineCount);
         summary.put("totalDevices", activeDevices.size());
-        summary.put("trafficBreakdown", getTrafficBreakdown());
-        summary.put("bandwidthShare", getBandwidthSharePerDevice());
+        summary.put("trafficBreakdown", getTrafficBreakdown(scopeStart));
+        summary.put("bandwidthShare", getBandwidthSharePerDevice(scopeStart));
         // AJT: dynamically read active profile instead of hardcoding
         String activeProfile = java.util.Arrays.stream(environment.getActiveProfiles())
                 .findFirst().orElse("default");

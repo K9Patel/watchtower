@@ -37,8 +37,7 @@ public class RealModeInitializer implements CommandLineRunner {
         // 1. Wipe all old alerts — fresh start for diagnosis engine
         alertRepository.deleteAll();
         
-        // 2. Wipe all old usage logs — charts will rebuild from live data
-        usageLogRepository.deleteAll();
+        // 2. Preserve usage logs so per-user scoped history can continue across sessions.
 
         // 3. Remove stale/legacy devices that shouldn't persist across restarts
         List<Device> staleDevices = deviceRepository.findAll().stream()

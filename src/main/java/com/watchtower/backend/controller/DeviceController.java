@@ -15,6 +15,7 @@ import com.watchtower.backend.service.NetworkDiscoveryService;
 import com.watchtower.backend.service.NetworkDiscoveryService.ScanResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -39,6 +40,7 @@ public class DeviceController {
     private final DeviceGeolocationRepository deviceGeolocationRepository;
     private final com.watchtower.backend.service.GeoLocationService geoLocationService;
     private final AlertRepository alertRepository;
+    private final com.watchtower.backend.service.UserDataScopeService userDataScopeService;
 
     // ==========================================================================
     //  Existing CRUD endpoints — unchanged
@@ -66,9 +68,11 @@ public class DeviceController {
 
     /** GET /api/devices/{id}/details — extended real-time details */
     @GetMapping("/{id}/details")
-    public ResponseEntity<Map<String, Object>> getDeviceDetails(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> getDeviceDetails(@PathVariable Long id, Authentication authentication) {
         try {
-            return ResponseEntity.ok(deviceDetailService.getDeviceDetails(id));
+            String userEmail = authentication != null ? authentication.getName() : null;
+            LocalDateTime scopeStart = userDataScopeService.getOrCreateScopeStart(userEmail);
+            return ResponseEntity.ok(deviceDetailService.getDeviceDetails(id, scopeStart));
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
@@ -103,8 +107,10 @@ public class DeviceController {
      * Sorted: auto-discovered NEW devices first, then ONLINE, then OFFLINE by bandwidth.
      */
     @GetMapping("/live")
-    public List<Map<String, Object>> getLiveDevices() {
+    public List<Map<String, Object>> getLiveDevices(Authentication authentication) {
         List<Device> allDevices = deviceRepository.findByIsActiveTrue();
+        String userEmail = authentication != null ? authentication.getName() : null;
+        LocalDateTime scopeStart = userDataScopeService.getOrCreateScopeStart(userEmail);
         Map<Long, DeviceGeolocation> geoByDeviceId = deviceGeolocationRepository
             .findAllByDeviceIdIn(allDevices.stream().map(Device::getId).toList())
             .stream()
@@ -114,7 +120,8 @@ public class DeviceController {
         double totalMbps = 0.0;
 
         for (Device device : allDevices) {
-            Optional<UsageLog> latestLog = usageLogRepository.findTopByDeviceOrderByTimestampDesc(device);
+            Optional<UsageLog> latestLog = usageLogRepository
+                    .findTopByDeviceAndTimestampAfterOrderByTimestampDesc(device, scopeStart);
             double bandwidthMbps = latestLog.map(log -> (log.getBytesUsed() * 8.0) / 10.0).orElse(0.0);
             mbpsByDeviceId.put(device.getId(), bandwidthMbps);
             totalMbps += bandwidthMbps;
@@ -176,8 +183,10 @@ public class DeviceController {
      * Returns active devices with geolocation + bandwidth for map visualization.
      */
     @GetMapping("/map")
-    public List<Map<String, Object>> getDevicesMap() {
+    public List<Map<String, Object>> getDevicesMap(Authentication authentication) {
         List<Device> devices = deviceRepository.findByIsActiveTrue();
+        String userEmail = authentication != null ? authentication.getName() : null;
+        LocalDateTime scopeStart = userDataScopeService.getOrCreateScopeStart(userEmail);
         Map<Long, DeviceGeolocation> geoByDeviceId = deviceGeolocationRepository
                 .findAllByDeviceIdIn(devices.stream().map(Device::getId).toList())
                 .stream()
@@ -188,7 +197,8 @@ public class DeviceController {
                 .collect(Collectors.groupingBy(a -> a.getDevice().getId(), Collectors.counting()));
 
         return devices.stream().map(device -> {
-            Optional<UsageLog> latestLog = usageLogRepository.findTopByDeviceOrderByTimestampDesc(device);
+            Optional<UsageLog> latestLog = usageLogRepository
+                    .findTopByDeviceAndTimestampAfterOrderByTimestampDesc(device, scopeStart);
             double bandwidthMbps = latestLog.map(log -> (log.getBytesUsed() * 8.0) / 10.0).orElse(0.0);
 
             DeviceGeolocation geo = geoByDeviceId.get(device.getId());

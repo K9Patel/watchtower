@@ -34,18 +34,21 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final EmailService emailService;
+    private final UserDataScopeService userDataScopeService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public AuthService(UserRepository userRepository,
                        PasswordResetTokenRepository resetTokenRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       EmailService emailService) {
+                       EmailService emailService,
+                       UserDataScopeService userDataScopeService) {
         this.userRepository = userRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.emailService = emailService;
+        this.userDataScopeService = userDataScopeService;
     }
 
     // ── SIGNUP ──────────────────────────────────────────────
@@ -128,6 +131,7 @@ public class AuthService {
 
         // Generate JWT token
         String token = jwtService.generateToken(user, false);
+        userDataScopeService.activateScope(user.getUserEmail());
 
         return AuthResponse.builder()
                 .message("Email verified successfully.")
@@ -176,6 +180,7 @@ public class AuthService {
 
         String token = jwtService.generateToken(user, request.isRemember());
         var expiresAt = jwtService.getExpirationForToken(request.isRemember());
+        userDataScopeService.activateScope(user.getUserEmail());
 
         return AuthResponse.builder()
                 .message("Login successful.")

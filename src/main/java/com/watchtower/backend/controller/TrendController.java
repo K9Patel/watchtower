@@ -3,9 +3,12 @@ package com.watchtower.backend.controller;
 import com.watchtower.backend.service.ClusteringService;
 import com.watchtower.backend.service.RecommendationService;
 import com.watchtower.backend.service.TrendAnalysisService;
+import com.watchtower.backend.service.UserDataScopeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -26,17 +29,21 @@ public class TrendController {
     private final TrendAnalysisService  trendService;
     private final RecommendationService recommendationService;
     private final ClusteringService     clusteringService;
+    private final UserDataScopeService  userDataScopeService;
 
     // Full adaptive analysis
     @GetMapping("/analysis")
-    public Map<String, Object> getTrendAnalysis() {
-        return trendService.getTrendAnalysis();
+    public Map<String, Object> getTrendAnalysis(Authentication authentication) {
+        // Use all available historical data for trend analysis (don't filter by user scope)
+        // User scope is for device filtering, not trend history
+        return trendService.getTrendAnalysis(null);
     }
 
     // Prediction subset (used by lightweight clients)
     @GetMapping("/predict")
-    public Map<String, Object> getPredictedNext() {
-        Map<String, Object> analysis = trendService.getTrendAnalysis();
+    public Map<String, Object> getPredictedNext(Authentication authentication) {
+        // Use all available historical data for trend analysis (don't filter by user scope)
+        Map<String, Object> analysis = trendService.getTrendAnalysis(null);
         return Map.of(
                 "predictedNext", analysis.get("predictedNext"),
                 "trendLabel",   analysis.get("trendLabel"),

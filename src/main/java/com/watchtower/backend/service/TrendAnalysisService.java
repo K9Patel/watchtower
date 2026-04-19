@@ -39,8 +39,13 @@ public class TrendAnalysisService {
     private final DeviceRepository deviceRepository;
 
     public Map<String, Object> getTrendAnalysis() {
-        List<UsageLog> recentLogs = usageLogRepository
-                .findTop30ForTrend(PageRequest.of(0, TREND_WINDOW));
+        return getTrendAnalysis(null);
+    }
+
+    public Map<String, Object> getTrendAnalysis(LocalDateTime scopeStart) {
+        List<UsageLog> recentLogs = (scopeStart == null)
+                ? usageLogRepository.findTop30ForTrend(PageRequest.of(0, TREND_WINDOW))
+                : usageLogRepository.findTopForTrendSince(scopeStart, PageRequest.of(0, TREND_WINDOW));
 
         Map<String, Object> result = new LinkedHashMap<>();
 
@@ -136,7 +141,7 @@ public class TrendAnalysisService {
             1.0
         );
 
-        List<Map<String, Object>> perDeviceForecasts = buildPerDeviceForecasts();
+        List<Map<String, Object>> perDeviceForecasts = buildPerDeviceForecasts(scopeStart);
         double aggregateDeviceConfidence = aggregateWeightedDeviceConfidence(perDeviceForecasts);
 
         // Blend model confidence with traffic-weighted per-device confidence.
@@ -179,10 +184,12 @@ public class TrendAnalysisService {
         return result;
     }
 
-    private List<Map<String, Object>> buildPerDeviceForecasts() {
+    private List<Map<String, Object>> buildPerDeviceForecasts(LocalDateTime scopeStart) {
         return deviceRepository.findByIsActiveTrue().stream()
                 .map(device -> {
-                    List<UsageLog> logs = usageLogRepository.findTop100ByDeviceOrderByTimestampDesc(device);
+                    List<UsageLog> logs = (scopeStart == null)
+                            ? usageLogRepository.findTop100ByDeviceOrderByTimestampDesc(device)
+                            : usageLogRepository.findTop100ByDeviceAndTimestampAfterOrderByTimestampDesc(device, scopeStart);
                     if (logs.size() < 5) {
                         return null;
                     }

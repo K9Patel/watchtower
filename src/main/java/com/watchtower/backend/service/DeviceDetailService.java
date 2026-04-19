@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.RestClientException;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,7 +30,7 @@ public class DeviceDetailService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final Map<String, String> vendorCache = new ConcurrentHashMap<>();
 
-    public Map<String, Object> getDeviceDetails(Long id) {
+    public Map<String, Object> getDeviceDetails(Long id, LocalDateTime scopeStart) {
         Device device = deviceRepository.findById(id).orElseThrow();
         Map<String, Object> details = new LinkedHashMap<>();
 
@@ -70,7 +72,7 @@ public class DeviceDetailService {
         details.put("alertsCount", alertsCount);
 
         // Bandwidth history / share
-        Map<String, Double> share = analysisService.getBandwidthSharePerDevice();
+        Map<String, Double> share = analysisService.getBandwidthSharePerDevice(scopeStart);
         details.put("bandwidthShare", share.getOrDefault(device.getDeviceName(), 0.0));
 
         return details;

@@ -6,11 +6,13 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.watchtower.backend.service.HistoryAnalysisService;
 import com.watchtower.backend.service.TrendAnalysisService;
+import com.watchtower.backend.service.UserDataScopeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
@@ -34,19 +36,22 @@ public class ReportController {
 
     private final HistoryAnalysisService historyService;
     private final TrendAnalysisService   trendService;
+    private final UserDataScopeService   userDataScopeService;
 
     /**
      * JSON preview of the weekly report data (used before PDF is fully wired on Day 9).
      */
     @GetMapping("/preview")
-    public Map<String, Object> getReportPreview() {
+    public Map<String, Object> getReportPreview(Authentication authentication) {
+        String userEmail = authentication != null ? authentication.getName() : null;
+        LocalDateTime scopeStart = userDataScopeService.getOrCreateScopeStart(userEmail);
         Map<String, Object> preview = new LinkedHashMap<>();
         preview.put("reportTitle",   "WatchTower Weekly Network Report");
         preview.put("generatedAt",   java.time.LocalDateTime.now().toString());
-        preview.put("dailyTotals",   historyService.getWeeklyDailyTotals());
+        preview.put("dailyTotals",   historyService.getWeeklyDailyTotals(scopeStart));
 
         List<Map<String, Object>> peakHoursList = new ArrayList<>();
-        historyService.getPeakHoursLastWeek().forEach((hour, traffic) -> {
+        historyService.getPeakHoursLastWeek(scopeStart).forEach((hour, traffic) -> {
             Map<String, Object> h = new LinkedHashMap<>();
             h.put("hour", String.format("%02d:00", hour));
             h.put("traffic", traffic);
@@ -54,8 +59,8 @@ public class ReportController {
         });
         preview.put("peakHours",     peakHoursList);
 
-        preview.put("perDevice",     historyService.getPerDeviceSummary());
-        preview.put("trend",         trendService.getTrendAnalysis());
+        preview.put("perDevice",     historyService.getPerDeviceSummary(scopeStart));
+        preview.put("trend",         trendService.getTrendAnalysis(scopeStart));
         return preview;
     }
 
@@ -64,9 +69,11 @@ public class ReportController {
      * Returns a downloadable PDF file with comprehensive report data.
      */
     @GetMapping("/weekly")
-    public ResponseEntity<byte[]> downloadWeeklyPdf() {
+    public ResponseEntity<byte[]> downloadWeeklyPdf(Authentication authentication) {
         try {
             log.info("ReportController: PDF generation requested");
+            String userEmail = authentication != null ? authentication.getName() : null;
+            LocalDateTime scopeStart = userDataScopeService.getOrCreateScopeStart(userEmail);
             
             // Create PDF document
             Document document = new Document(PageSize.A4, 50, 50, 50, 50);
@@ -96,7 +103,7 @@ public class ReportController {
             // Daily Totals Section
             document.add(new Paragraph("Daily Usage Statistics", headerFont));
             
-            List<Map<String, Object>> dailyList = historyService.getWeeklyDailyTotals();
+            List<Map<String, Object>> dailyList = historyService.getWeeklyDailyTotals(scopeStart);
             if (dailyList != null && !dailyList.isEmpty()) {
                 PdfPTable table = new PdfPTable(3);
                 table.setWidthPercentage(100);
@@ -134,7 +141,7 @@ public class ReportController {
             
             // Peak Hours Section
             document.add(new Paragraph("\nPeak Activity Hours", headerFont));
-            Map<Integer, Double> peakData = historyService.getPeakHoursLastWeek();
+            Map<Integer, Double> peakData = historyService.getPeakHoursLastWeek(scopeStart);
             if (peakData != null && !peakData.isEmpty()) {
                 PdfPTable peakTable = new PdfPTable(2);
                 peakTable.setWidthPercentage(100);
@@ -160,7 +167,7 @@ public class ReportController {
             
             // Per-Device Summary
             document.add(new Paragraph("\nPer-Device Summary", headerFont));
-            List<Map<String, Object>> deviceList = historyService.getPerDeviceSummary();
+            List<Map<String, Object>> deviceList = historyService.getPerDeviceSummary(scopeStart);
             if (deviceList != null && !deviceList.isEmpty()) {
                 PdfPTable deviceTable = new PdfPTable(4);
                 deviceTable.setWidthPercentage(100);
@@ -201,7 +208,7 @@ public class ReportController {
             
             // Trend Analysis
             document.add(new Paragraph("\nTrend Analysis", headerFont));
-            Map<String, Object> trendData = trendService.getTrendAnalysis();
+            Map<String, Object> trendData = trendService.getTrendAnalysis(scopeStart);
             if (trendData != null) {
                 String direction = trendData.get("direction") != null ? 
                     trendData.get("direction").toString() : "Stable";

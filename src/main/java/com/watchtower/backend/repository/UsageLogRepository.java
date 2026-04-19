@@ -25,14 +25,20 @@ public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
     // NetworkMonitorService: logs for ONE device in last 60s (Mbps calc)
     List<UsageLog> findByDeviceAndTimestampAfter(Device device, LocalDateTime timestamp);
 
+   Optional<UsageLog> findTopByDeviceAndTimestampAfterOrderByTimestampDesc(Device device, LocalDateTime timestamp);
+
     // Z-Score anomaly detection: last 100 readings per device
     List<UsageLog> findTop100ByDeviceOrderByTimestampDesc(Device device);
+
+   List<UsageLog> findTop100ByDeviceAndTimestampAfterOrderByTimestampDesc(Device device, LocalDateTime timestamp);
 
        // Feature 2: latest 10-second snapshot row for one device
        Optional<UsageLog> findTopByDeviceOrderByTimestampDesc(Device device);
 
     // StatsController: paginated history feed
     Page<UsageLog> findAllByOrderByTimestampDesc(Pageable pageable);
+
+   Page<UsageLog> findByTimestampAfterOrderByTimestampDesc(LocalDateTime timestamp, Pageable pageable);
 
     // HistoryAnalysisService: daily usage totals — PostgreSQL DATE() function
     @Query("SELECT CAST(u.timestamp AS date), SUM(u.bytesUsed), MAX(u.bandwidthPercentage) " +
@@ -41,6 +47,12 @@ public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
            "ORDER BY CAST(u.timestamp AS date)")
     List<Object[]> findDailyTotals(@Param("since") LocalDateTime since);
 
+    @Query("SELECT CAST(u.timestamp AS date), SUM(u.bytesUsed), MAX(u.bandwidthPercentage) " +
+           "FROM UsageLog u WHERE u.timestamp >= :since AND u.timestamp <= :until " +
+           "GROUP BY CAST(u.timestamp AS date) " +
+           "ORDER BY CAST(u.timestamp AS date)")
+    List<Object[]> findDailyTotalsBetween(@Param("since") LocalDateTime since, @Param("until") LocalDateTime until);
+
     // HistoryAnalysisService: peak hours heatmap — avg load per hour
     @Query("SELECT EXTRACT(HOUR FROM u.timestamp), SUM(u.bytesUsed) " +
            "FROM UsageLog u WHERE u.timestamp >= :since " +
@@ -48,9 +60,20 @@ public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
            "ORDER BY EXTRACT(HOUR FROM u.timestamp)")
     List<Object[]> findPeakHours(@Param("since") LocalDateTime since);
 
+    @Query("SELECT EXTRACT(HOUR FROM u.timestamp), SUM(u.bytesUsed) " +
+           "FROM UsageLog u WHERE u.timestamp >= :since AND u.timestamp <= :until " +
+           "GROUP BY EXTRACT(HOUR FROM u.timestamp) " +
+           "ORDER BY EXTRACT(HOUR FROM u.timestamp)")
+    List<Object[]> findPeakHoursBetween(@Param("since") LocalDateTime since, @Param("until") LocalDateTime until);
+
+    List<UsageLog> findByDeviceAndTimestampBetween(Device device, LocalDateTime since, LocalDateTime until);
+
     // TrendAnalysisService: last 30 readings for linear regression
     @Query("SELECT u FROM UsageLog u ORDER BY u.timestamp DESC")
     List<UsageLog> findTop30ForTrend(Pageable pageable);
+
+   @Query("SELECT u FROM UsageLog u WHERE u.timestamp >= :since ORDER BY u.timestamp DESC")
+   List<UsageLog> findTopForTrendSince(@Param("since") LocalDateTime since, Pageable pageable);
 
     // RealModeInitializer: delete all logs for a given device (used for cleanup)
     int deleteByDevice(Device device);

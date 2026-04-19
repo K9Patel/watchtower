@@ -9,12 +9,59 @@ const AnalyticsPage = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [previousNetworks, setPreviousNetworks] = useState([]);
+  const [selectedNetwork, setSelectedNetwork] = useState('');
+  const [previousSnapshot, setPreviousSnapshot] = useState(null);
+  const [previousLoading, setPreviousLoading] = useState(false);
+  const [previousError, setPreviousError] = useState('');
+
+  const authHeaders = () => {
+    const token = localStorage.getItem('auth_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   useEffect(() => {
     fetchAnalytics();
+    fetchPreviousNetworks();
     const intervalId = setInterval(fetchAnalytics, 10000); // Refresh every 10 seconds for live data
     return () => clearInterval(intervalId);
   }, []);
+
+  const fetchPreviousNetworks = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/history/network-states/previous`, {
+        headers: authHeaders(),
+      });
+      const networks = Array.isArray(res.data) ? res.data : [];
+      setPreviousNetworks(networks);
+      if (networks.length > 0) {
+        setSelectedNetwork(networks[0].networkPrefix);
+      }
+      setPreviousError('');
+    } catch (err) {
+      console.error('Failed to load previous network list:', err);
+      setPreviousError('Could not load previous network connections.');
+    }
+  };
+
+  const loadPreviousNetworkState = async () => {
+    if (!selectedNetwork) return;
+    try {
+      setPreviousLoading(true);
+      const res = await axios.get(`${API_BASE_URL}/history/network-state`, {
+        params: { networkPrefix: selectedNetwork },
+        headers: authHeaders(),
+      });
+      setPreviousSnapshot(res.data || null);
+      setPreviousError('');
+    } catch (err) {
+      console.error('Failed to load previous network snapshot:', err);
+      setPreviousError('Could not load selected previous network state.');
+      setPreviousSnapshot(null);
+    } finally {
+      setPreviousLoading(false);
+    }
+  };
 
   const fetchAnalytics = async () => {
     try {
@@ -97,6 +144,66 @@ const AnalyticsPage = () => {
           </h1>
           <p className="page-subtitle">Detailed network statistics and trends</p>
         </div>
+      </div>
+
+      <div className="glass-panel" style={{ marginBottom: '20px' }}>
+        <h2 className="section-title">Previous Network States</h2>
+        <p style={{ color: 'var(--text-secondary)', marginTop: 0 }}>
+          View only the historical state captured before each network change.
+        </p>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <select
+            className="filter-select"
+            value={selectedNetwork}
+            onChange={(e) => setSelectedNetwork(e.target.value)}
+            style={{ minWidth: '260px', maxWidth: '420px' }}
+          >
+            {previousNetworks.length === 0 && <option value="">No previous networks found</option>}
+            {previousNetworks.map((network) => (
+              <option key={network.networkPrefix} value={network.networkPrefix}>
+                {network.networkPrefix} | last seen {new Date(network.lastSeenAt).toLocaleString()}
+              </option>
+            ))}
+          </select>
+
+          <button
+            className="btn-secondary"
+            onClick={loadPreviousNetworkState}
+            disabled={!selectedNetwork || previousLoading}
+          >
+            {previousLoading ? 'Loading state...' : 'Load Previous State'}
+          </button>
+        </div>
+
+        {previousError && (
+          <p style={{ marginTop: '12px', color: '#ef4444' }}>{previousError}</p>
+        )}
+
+        {previousSnapshot && (
+          <div style={{ marginTop: '16px' }}>
+            <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              <span><strong>Network:</strong> {previousSnapshot.networkPrefix}</span>
+              <span><strong>From:</strong> {new Date(previousSnapshot.startedAt).toLocaleString()}</span>
+              <span><strong>Until:</strong> {new Date(previousSnapshot.lastSeenAt).toLocaleString()}</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              <div className="glass-panel" style={{ padding: '12px' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '8px' }}>Daily Points</h3>
+                <p style={{ margin: 0 }}>{Array.isArray(previousSnapshot.daily) ? previousSnapshot.daily.length : 0}</p>
+              </div>
+              <div className="glass-panel" style={{ padding: '12px' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '8px' }}>Peak Hour Entries</h3>
+                <p style={{ margin: 0 }}>{previousSnapshot.peakHours ? Object.keys(previousSnapshot.peakHours).length : 0}</p>
+              </div>
+              <div className="glass-panel" style={{ padding: '12px' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '8px' }}>Devices Seen</h3>
+                <p style={{ margin: 0 }}>{Array.isArray(previousSnapshot.perDevice) ? previousSnapshot.perDevice.length : 0}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Charts */}

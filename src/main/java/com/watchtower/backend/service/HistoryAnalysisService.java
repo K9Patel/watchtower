@@ -20,12 +20,32 @@ public class HistoryAnalysisService {
     private final UsageLogRepository usageLogRepository;
     private final DeviceRepository deviceRepository;
 
+    private LocalDateTime applyScopeStart(LocalDateTime defaultSince, LocalDateTime scopeStart) {
+        if (scopeStart == null) {
+            return defaultSince;
+        }
+        return scopeStart.isAfter(defaultSince) ? scopeStart : defaultSince;
+    }
+
     // AJT Unit 8 — JPQL @Query:
     // GROUP BY day — returns daily total MB for last 7 days
     // Used by history chart on dashboard
     public List<Map<String, Object>> getWeeklyDailyTotals() {
-        LocalDateTime since = LocalDateTime.now().minusDays(7);
+        return getWeeklyDailyTotals(null);
+    }
+
+    public List<Map<String, Object>> getWeeklyDailyTotals(LocalDateTime scopeStart) {
+        LocalDateTime since = applyScopeStart(LocalDateTime.now().minusDays(7), scopeStart);
         List<Object[]> raw = usageLogRepository.findDailyTotals(since);
+        return mapDailyTotals(raw);
+    }
+
+    public List<Map<String, Object>> getDailyTotalsBetween(LocalDateTime since, LocalDateTime until) {
+        List<Object[]> raw = usageLogRepository.findDailyTotalsBetween(since, until);
+        return mapDailyTotals(raw);
+    }
+
+    private List<Map<String, Object>> mapDailyTotals(List<Object[]> raw) {
 
         return raw.stream().map(row -> {
             Map<String, Object> entry = new LinkedHashMap<>();
@@ -40,8 +60,21 @@ public class HistoryAnalysisService {
     // GROUP BY hour — returns avg bandwidth % per hour of day (0-23)
     // Used by peak hours heatmap on dashboard
     public Map<Integer, Double> getPeakHoursLastWeek() {
-        LocalDateTime since = LocalDateTime.now().minusDays(7);
+        return getPeakHoursLastWeek(null);
+    }
+
+    public Map<Integer, Double> getPeakHoursLastWeek(LocalDateTime scopeStart) {
+        LocalDateTime since = applyScopeStart(LocalDateTime.now().minusDays(7), scopeStart);
         List<Object[]> raw = usageLogRepository.findPeakHours(since);
+        return mapPeakHours(raw);
+    }
+
+    public Map<Integer, Double> getPeakHoursBetween(LocalDateTime since, LocalDateTime until) {
+        List<Object[]> raw = usageLogRepository.findPeakHoursBetween(since, until);
+        return mapPeakHours(raw);
+    }
+
+    private Map<Integer, Double> mapPeakHours(List<Object[]> raw) {
 
         Map<Integer, Double> peakHours = new LinkedHashMap<>();
 
@@ -64,12 +97,26 @@ public class HistoryAnalysisService {
     // Per-device summary using Streams + Lambdas on query results
     // Returns max, min, avg, total for each device
     public List<Map<String, Object>> getPerDeviceSummary() {
+        return getPerDeviceSummary(null);
+    }
+
+    public List<Map<String, Object>> getPerDeviceSummary(LocalDateTime scopeStart) {
         List<Device> devices = deviceRepository.findByIsActiveTrue();
-        LocalDateTime since = LocalDateTime.now().minusDays(7);
+        LocalDateTime since = applyScopeStart(LocalDateTime.now().minusDays(7), scopeStart);
+        return getPerDeviceSummaryBetween(devices, since, null);
+    }
+
+    public List<Map<String, Object>> getPerDeviceSummaryBetween(LocalDateTime since, LocalDateTime until) {
+        List<Device> devices = deviceRepository.findByIsActiveTrue();
+        return getPerDeviceSummaryBetween(devices, since, until);
+    }
+
+    private List<Map<String, Object>> getPerDeviceSummaryBetween(List<Device> devices, LocalDateTime since, LocalDateTime until) {
 
         return devices.stream().map(device -> {
-            List<UsageLog> logs = usageLogRepository
-                .findByDeviceAndTimestampAfter(device, since);
+            List<UsageLog> logs = until == null
+                    ? usageLogRepository.findByDeviceAndTimestampAfter(device, since)
+                    : usageLogRepository.findByDeviceAndTimestampBetween(device, since, until);
 
             Map<String, Object> summary = new LinkedHashMap<>();
             summary.put("deviceName", device.getDeviceName());
@@ -104,8 +151,13 @@ public class HistoryAnalysisService {
 
     // Returns last N usage logs for a specific device
     public List<UsageLog> getDeviceHistory(Long deviceId, int limit) {
+        return getDeviceHistory(deviceId, limit, null);
+    }
+
+    public List<UsageLog> getDeviceHistory(Long deviceId, int limit, LocalDateTime scopeStart) {
+        LocalDateTime since = applyScopeStart(LocalDateTime.now().minusDays(7), scopeStart);
         return deviceRepository.findById(deviceId).map(device ->
-            usageLogRepository.findTop100ByDeviceOrderByTimestampDesc(device)
+            usageLogRepository.findTop100ByDeviceAndTimestampAfterOrderByTimestampDesc(device, since)
                 .stream().limit(limit).collect(Collectors.toList())
         ).orElse(Collections.emptyList());
     }
