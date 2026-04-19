@@ -1,8 +1,18 @@
 import React, { useMemo } from 'react';
 import { Activity, Users, Monitor, ShieldAlert } from 'lucide-react';
 
-const SummaryCards = ({ summary, devices = [], replay = null }) => {
+const SummaryCards = ({ summary, devices = [], replay = null, healthScore = null }) => {
   if (!summary) return null;
+
+  const normalizedHealthScore = Number.isFinite(Number(healthScore))
+    ? Math.max(0, Math.min(100, Number(healthScore)))
+    : Number.isFinite(Number(summary.health_score))
+      ? Math.max(0, Math.min(100, Number(summary.health_score)))
+      : Number.isFinite(Number(summary.healthScore))
+        ? Math.max(0, Math.min(100, Number(summary.healthScore)))
+        : null;
+
+  const isHealthCritical = normalizedHealthScore !== null && normalizedHealthScore < 50;
 
   const computed = useMemo(() => {
     if (replay) {
@@ -78,7 +88,16 @@ const SummaryCards = ({ summary, devices = [], replay = null }) => {
   return (
     <div className="summary-cards-grid">
       {cards.map((card, i) => (
-        <div key={i} className="glass-panel summary-card">
+        <div
+          key={i}
+          className="glass-panel summary-card"
+          style={isHealthCritical
+            ? {
+              borderColor: 'rgba(239, 68, 68, 0.55)',
+              boxShadow: '0 0 0 1px rgba(239, 68, 68, 0.35), 0 10px 20px rgba(239, 68, 68, 0.12)'
+            }
+            : undefined}
+        >
           <div style={{ background: card.bg, padding: '16px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {card.icon}
           </div>

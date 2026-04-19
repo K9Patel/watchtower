@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import SummaryCards from '../components/SummaryCards';
 import DevicesTable from '../components/DevicesTable';
 import AlertsPanel from '../components/AlertsPanel';
 import PredictionBanner from '../components/PredictionBanner';
 import IncidentTimelineReplay from '../components/IncidentTimelineReplay';
-import { useSettings } from '../context/SettingsContext';
+import NetworkHealthScoreRing from '../components/NetworkHealthScoreRing';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { API_BASE_URL } from '../config/api';
 import './Pages.css';
 
 const OverviewPage = () => {
-  const { settings } = useSettings();
   const [summary, setSummary] = useState(null);
   const [devices, setDevices] = useState([]);
   const [clusters, setClusters] = useState([]);
@@ -21,6 +20,8 @@ const OverviewPage = () => {
   const [replaySnapshot, setReplaySnapshot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toastAlert, setToastAlert] = useState(null);
+  const [healthToast, setHealthToast] = useState(false);
+  const previousHealthBandRef = useRef(null);
 
   const { dashboardData, latestAlert, deviceUpdates, connected } = useWebSocket();
 
@@ -63,10 +64,13 @@ const OverviewPage = () => {
   // Handle incoming WebSocket dashboard updates
   useEffect(() => {
     if (dashboardData) {
-      setSummary(dashboardData);
-      // Keep trend fresh even when initial batch fetch had a transient failure.
-      fetchTrendData();
-      fetchTimelineData();
+      setSummary((prev) => ({ ...(prev || {}), ...dashboardData }));
+
+      // Keep trend/timeline fresh for full summary pushes, not for health-only deltas.
+      if (Object.prototype.hasOwnProperty.call(dashboardData, 'totalLoadPercent')) {
+        fetchTrendData();
+        fetchTimelineData();
+      }
     }
   }, [dashboardData]);
 
@@ -96,6 +100,22 @@ const OverviewPage = () => {
       fetchClusters();
     }
   }, [deviceUpdates]);
+
+  useEffect(() => {
+    if (!summary) return;
+
+    const resolved = Number(summary.health_score ?? summary.healthScore ?? summary.systemHealth);
+    if (!Number.isFinite(resolved)) return;
+
+    const healthBand = resolved >= 85 ? 'green' : resolved >= 50 ? 'yellow' : 'red';
+
+    if (previousHealthBandRef.current && previousHealthBandRef.current !== 'red' && healthBand === 'red') {
+      setHealthToast(true);
+      setTimeout(() => setHealthToast(false), 5000);
+    }
+
+    previousHealthBandRef.current = healthBand;
+  }, [summary]);
 
   const fetchDashboardData = async () => {
     try {
@@ -159,6 +179,19 @@ const OverviewPage = () => {
         </div>
       )}
 
+      {healthToast && (
+        <div style={{
+          position: 'fixed', top: '84px', right: '20px',
+          background: 'linear-gradient(135deg, #ef4444, #991b1b)', color: 'white',
+          padding: '12px 24px', borderRadius: '8px', zIndex: 1000,
+          boxShadow: '0 10px 25px rgba(239, 68, 68, 0.4)', fontWeight: 700,
+          display: 'flex', alignItems: 'center', gap: '10px',
+          animation: 'slideDown 0.3s ease-out'
+        }}>
+          ⚠️ Network health critical
+        </div>
+      )}
+
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1>Overview</h1>
@@ -182,8 +215,14 @@ const OverviewPage = () => {
         </div>
       </div>
 
+      <NetworkHealthScoreRing summary={summary} />
       <PredictionBanner trend={trend} />
-      <SummaryCards summary={summary} devices={devices} replay={replaySnapshot} />
+      <SummaryCards
+        summary={summary}
+        devices={devices}
+        replay={replaySnapshot}
+        healthScore={summary?.health_score ?? summary?.healthScore}
+      />
 
       <IncidentTimelineReplay
         timeline={timeline}

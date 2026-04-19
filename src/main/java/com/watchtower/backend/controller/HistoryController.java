@@ -26,6 +26,13 @@ public class HistoryController {
         return historyService.getWeeklyDailyTotals();
     }
 
+    // GET /api/history/health-hourly?minutes=60 — health score trend timeline
+    @GetMapping("/health-hourly")
+    public List<Map<String, Object>> getHealthHourly(
+            @RequestParam(defaultValue = "60") int minutes) {
+        return historyService.getHourlyHealthScoreTimeline(minutes);
+    }
+
     // GET /api/history/peak-hours — avg bandwidth % per hour 0-23 (heatmap)
     @GetMapping("/peak-hours")
     public Map<Integer, Double> getPeakHours() {

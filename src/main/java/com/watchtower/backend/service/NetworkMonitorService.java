@@ -20,6 +20,7 @@ public class NetworkMonitorService {
 
     private final DeviceRepository deviceRepository;
     private final UsageLogRepository usageLogRepository;
+    private final NetworkHealthService networkHealthService;
 
     // AJT Unit 3 — Java Networking:
     // InetAddress.isReachable() sends a ping to each device IP.
@@ -76,6 +77,7 @@ public class NetworkMonitorService {
         }
 
         log.debug("NetworkMonitor: {} online, {} offline", online, offline);
+        networkHealthService.recalculateAndBroadcast();
     }
 
     // AJT Unit 3 — Java Networking:

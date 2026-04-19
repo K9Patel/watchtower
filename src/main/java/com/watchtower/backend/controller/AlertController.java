@@ -2,6 +2,7 @@ package com.watchtower.backend.controller;
 
 import com.watchtower.backend.entity.Alert;
 import com.watchtower.backend.repository.AlertRepository;
+import com.watchtower.backend.service.NetworkHealthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +20,7 @@ import java.util.Map;
 public class AlertController {
 
     private final AlertRepository alertRepository;
+    private final NetworkHealthService networkHealthService;
 
     // GET /api/alerts — unresolved alerts, CRITICAL first (dashboard feed)
     @GetMapping
@@ -58,6 +60,7 @@ public class AlertController {
         return alertRepository.findById(id).map(alert -> {
             alert.setIsResolved(true);
             alertRepository.save(alert);
+            networkHealthService.recalculateAndBroadcast();
             return ResponseEntity.ok(Map.of("message", "Alert resolved", "id", id.toString()));
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -68,6 +71,7 @@ public class AlertController {
         List<Alert> open = alertRepository.findByIsResolvedFalseOrderByCreatedAtDesc();
         open.forEach(a -> a.setIsResolved(true));
         alertRepository.saveAll(open);
+        networkHealthService.recalculateAndBroadcast();
         return Map.of("message", "All " + open.size() + " alerts resolved");
     }
 

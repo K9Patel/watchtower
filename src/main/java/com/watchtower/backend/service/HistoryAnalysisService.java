@@ -1,14 +1,18 @@
 package com.watchtower.backend.service;
 
 import com.watchtower.backend.entity.Device;
+import com.watchtower.backend.entity.HealthScoreLog;
 import com.watchtower.backend.entity.UsageLog;
 import com.watchtower.backend.repository.DeviceRepository;
+import com.watchtower.backend.repository.HealthScoreLogRepository;
 import com.watchtower.backend.repository.UsageLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,23 +21,74 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class HistoryAnalysisService {
 
+    private static final DateTimeFormatter HEALTH_TIME_LABEL = DateTimeFormatter.ofPattern("HH:mm");
+
     private final UsageLogRepository usageLogRepository;
     private final DeviceRepository deviceRepository;
+    private final HealthScoreLogRepository healthScoreLogRepository;
+    private final NetworkHealthService networkHealthService;
 
     // AJT Unit 8 — JPQL @Query:
     // GROUP BY day — returns daily total MB for last 7 days
     // Used by history chart on dashboard
     public List<Map<String, Object>> getWeeklyDailyTotals() {
-        LocalDateTime since = LocalDateTime.now().minusDays(7);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime since = now.minusDays(7);
         List<Object[]> raw = usageLogRepository.findDailyTotals(since);
+        Map<String, Double> dailyHealthScores = healthScoreLogRepository.findDailyAverageScores(since).stream()
+                .collect(Collectors.toMap(
+                        row -> row[0].toString(),
+                        row -> round1(((Number) row[1]).doubleValue()),
+                        (a, b) -> b,
+                        LinkedHashMap::new
+                ));
+
+        double latestHealth = networkHealthService.getLatestSnapshot().score();
+        double hourlyHealth = getHourlyHealthAverage(60);
+        String todayKey = LocalDate.now().toString();
 
         return raw.stream().map(row -> {
             Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("date", row[0].toString());
-            entry.put("totalTraffic", ((Number) row[1]).doubleValue());
-            entry.put("peakLoad", row.length > 2 && row[2] != null ? ((Number) row[2]).doubleValue() : 0.0);
+            String dateKey = row[0].toString();
+            double dayHealth = dailyHealthScores.getOrDefault(dateKey, latestHealth);
+
+            entry.put("date", dateKey);
+            entry.put("totalTraffic", round2(((Number) row[1]).doubleValue()));
+            entry.put("peakLoad", row.length > 2 && row[2] != null ? round2(((Number) row[2]).doubleValue()) : 0.0);
+            entry.put("healthScore", round1(dayHealth));
+            entry.put("hourlyHealthScore", todayKey.equals(dateKey) ? hourlyHealth : round1(dayHealth));
             return entry;
         }).collect(Collectors.toList());
+    }
+
+    public List<Map<String, Object>> getHourlyHealthScoreTimeline(int minutes) {
+        int windowMinutes = Math.max(15, Math.min(minutes, 240));
+        LocalDateTime since = LocalDateTime.now().minusMinutes(windowMinutes);
+
+        List<HealthScoreLog> persisted = healthScoreLogRepository.findByRecordedAtAfterOrderByRecordedAtAsc(since);
+        List<Map<String, Object>> timeline = persisted.stream()
+                .map(this::toHealthPoint)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        NetworkHealthService.HealthSnapshot latest = networkHealthService.getLatestSnapshot();
+        if (latest.recordedAt().isAfter(since)) {
+            Map<String, Object> latestPoint = toHealthPoint(latest);
+
+            if (timeline.isEmpty()) {
+                timeline.add(latestPoint);
+            } else {
+                String lastTimestamp = String.valueOf(timeline.get(timeline.size() - 1).get("timestamp"));
+                LocalDateTime lastTime = LocalDateTime.parse(lastTimestamp);
+
+                if (latest.recordedAt().isAfter(lastTime.plusSeconds(30))) {
+                    timeline.add(latestPoint);
+                } else {
+                    timeline.set(timeline.size() - 1, latestPoint);
+                }
+            }
+        }
+
+        return timeline;
     }
 
     // AJT Unit 8 — JPQL @Query:
@@ -108,5 +163,46 @@ public class HistoryAnalysisService {
             usageLogRepository.findTop100ByDeviceOrderByTimestampDesc(device)
                 .stream().limit(limit).collect(Collectors.toList())
         ).orElse(Collections.emptyList());
+    }
+
+    private double getHourlyHealthAverage(int minutes) {
+        List<Map<String, Object>> points = getHourlyHealthScoreTimeline(minutes);
+        if (points.isEmpty()) {
+            return round1(networkHealthService.getLatestSnapshot().score());
+        }
+
+        double average = points.stream()
+                .map(p -> (Number) p.get("healthScore"))
+                .mapToDouble(Number::doubleValue)
+                .average()
+                .orElse(networkHealthService.getLatestSnapshot().score());
+
+        return round1(average);
+    }
+
+    private Map<String, Object> toHealthPoint(HealthScoreLog log) {
+        Map<String, Object> point = new LinkedHashMap<>();
+        point.put("timestamp", log.getRecordedAt().toString());
+        point.put("label", log.getRecordedAt().format(HEALTH_TIME_LABEL));
+        point.put("healthScore", Integer.valueOf(log.getScore()));
+        point.put("trend", log.getTrend() != null ? log.getTrend().toLowerCase(Locale.ROOT) : "stable");
+        return point;
+    }
+
+    private Map<String, Object> toHealthPoint(NetworkHealthService.HealthSnapshot snapshot) {
+        Map<String, Object> point = new LinkedHashMap<>();
+        point.put("timestamp", snapshot.recordedAt().toString());
+        point.put("label", snapshot.recordedAt().format(HEALTH_TIME_LABEL));
+        point.put("healthScore", (int) snapshot.score());
+        point.put("trend", snapshot.trend().apiValue());
+        return point;
+    }
+
+    private double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
+    private double round1(double value) {
+        return Math.round(value * 10.0) / 10.0;
     }
 }

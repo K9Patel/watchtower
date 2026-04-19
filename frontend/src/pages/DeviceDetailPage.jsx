@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Activity, ShieldAlert, Clock, Network, Server, HardDrive, AlertTriangle } from 'lucide-react';
@@ -11,24 +11,41 @@ const DeviceDetailPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const pollRef = useRef(null);
 
-  useEffect(() => {
-    fetchDeviceDetails();
-    const interval = setInterval(fetchDeviceDetails, 10000); // refresh real-time details every 10s
-    return () => clearInterval(interval);
-  }, [id]);
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
 
-  const fetchDeviceDetails = async () => {
+  const fetchDeviceDetails = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/devices/${id}/details`);
       setData(res.data);
+      setError(null);
       setLoading(false);
     } catch (err) {
-      console.error('Error fetching device details:', err);
-      setError('Failed to load device details.');
+      const status = err.response?.status;
+      if (status === 404) {
+        stopPolling();
+        setError('Device not found. It may have gone offline and been removed.');
+      } else {
+        console.error('Error fetching device details:', err);
+        setError('Failed to load device details.');
+      }
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchDeviceDetails();
+    stopPolling();
+    pollRef.current = setInterval(fetchDeviceDetails, 10000); // refresh every 10s while available
+    return () => stopPolling();
+  }, [fetchDeviceDetails]);
 
   if (loading) {
     return (

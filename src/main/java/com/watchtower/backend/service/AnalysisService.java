@@ -4,6 +4,7 @@ import com.watchtower.backend.entity.Device;
 import com.watchtower.backend.entity.UsageLog;
 import com.watchtower.backend.repository.DeviceRepository;
 import com.watchtower.backend.repository.UsageLogRepository;
+import com.watchtower.backend.service.NetworkHealthService.HealthSnapshot;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
@@ -27,7 +28,7 @@ public class AnalysisService {
     private final UsageLogRepository usageLogRepository;
     private final DeviceRepository deviceRepository;
     private final Environment environment;
-    private final com.watchtower.backend.repository.AlertRepository alertRepository;
+    private final NetworkHealthService networkHealthService;
 
     // AJT — Java Streams + Lambdas:
     // Reads last 60s of logs, calculates total network load %
@@ -95,7 +96,22 @@ public class AnalysisService {
         // group by device name, sum bytes, convert to percentage of total
         return recent.stream()
                 .collect(Collectors.groupingBy(
-                        log -> log.getDevice().getDeviceName(),
+                        log -> {
+                            Device d = log.getDevice();
+                            if (d == null) {
+                                return "Unknown Device";
+                            }
+
+                            if (d.getDeviceName() != null && !d.getDeviceName().isBlank()) {
+                                return d.getDeviceName();
+                            }
+
+                            if (d.getIpAddress() != null && !d.getIpAddress().isBlank()) {
+                                return d.getIpAddress();
+                            }
+
+                            return "Device-" + (d.getId() != null ? d.getId() : "unknown");
+                        },
                         Collectors.summingDouble(UsageLog::getBytesUsed)))
                 .entrySet().stream()
                 .collect(Collectors.toMap(
@@ -127,9 +143,20 @@ public class AnalysisService {
         summary.put("activeProfile", activeProfile);
         summary.put("timestamp", LocalDateTime.now().toString());
 
-        long unresolvedAlerts = alertRepository.countByIsResolvedFalse();
-        double systemHealth = Math.max(0, 100.0 - (totalLoad / 2.0) - (unresolvedAlerts * 5));
-        summary.put("systemHealth", Math.round(systemHealth * 10.0) / 10.0);
+        HealthSnapshot health = networkHealthService.getLatestSnapshot();
+        int healthScore = health.score();
+
+        summary.put("health_score", healthScore);
+        summary.put("trend", health.trend().apiValue());
+        summary.put("bandwidth_score", (int) health.bandwidthScore());
+        summary.put("latency_score", (int) health.latencyScore());
+        summary.put("alert_score", (int) health.alertScore());
+        summary.put("uptime_score", (int) health.uptimeScore());
+
+        // Backward-compatible aliases for existing frontend cards.
+        summary.put("healthScore", healthScore);
+        summary.put("healthTrend", health.trend().apiValue());
+        summary.put("systemHealth", (double) healthScore);
 
         long jvmUptimeMillis = ManagementFactory.getRuntimeMXBean().getUptime();
         long seconds = jvmUptimeMillis / 1000 % 60;

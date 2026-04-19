@@ -67,11 +67,7 @@ public class DeviceController {
     /** GET /api/devices/{id}/details — extended real-time details */
     @GetMapping("/{id}/details")
     public ResponseEntity<Map<String, Object>> getDeviceDetails(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(deviceDetailService.getDeviceDetails(id));
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(deviceDetailService.getDeviceDetails(id));
     }
 
     /** GET /api/devices/count */

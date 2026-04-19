@@ -14,6 +14,7 @@ import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -191,7 +192,7 @@ public class NetworkDiscoveryService {
             }
 
             // ── Detect gateway IP (local machine) and exclude from device list
-            String localIp = getLocalIpAddress();
+            String localIp = getLocalIpAddress(currentNetworkPrefix);
             log.debug("NetworkDiscovery: Detected local IP = {}", localIp);
 
             // ── Step 2: Run `arp -a` to get OS ARP cache + active subnet scan ─
@@ -435,6 +436,32 @@ public class NetworkDiscoveryService {
      * Used to detect when the machine switches WiFi networks.
      */
     private String getCurrentNetworkPrefix() {
+        // Prefer the dominant ARP subnet, which reflects the active LAN segment.
+        try {
+            List<ArpEntry> entries = readArpTable();
+            Map<String, Integer> prefixCounts = new HashMap<>();
+
+            for (ArpEntry e : entries) {
+                String prefix = extractPrefix(e.ip());
+                if (prefix == null || !isPrivatePrefix(prefix)) {
+                    continue;
+                }
+                prefixCounts.merge(prefix, 1, Integer::sum);
+            }
+
+            Optional<Map.Entry<String, Integer>> dominant = prefixCounts.entrySet().stream()
+                    .max(Map.Entry.comparingByValue());
+
+            if (dominant.isPresent()) {
+                String prefix = dominant.get().getKey();
+                log.debug("NetworkDiscovery: selected ARP-dominant network prefix = {} ({} entries)",
+                        prefix, dominant.get().getValue());
+                return prefix;
+            }
+        } catch (Exception e) {
+            log.debug("NetworkDiscovery: ARP-based prefix detection failed — {}", e.getMessage());
+        }
+
         try {
             NetworkInterface ni;
             java.util.Enumeration<NetworkInterface> interfaces = 
@@ -443,8 +470,8 @@ public class NetworkDiscoveryService {
             while (interfaces.hasMoreElements()) {
                 ni = interfaces.nextElement();
                 
-                // Skip loopback and inactive interfaces
-                if (ni.isLoopback() || !ni.isUp()) continue;
+                // Skip loopback/inactive/virtual interfaces to avoid Docker/Hyper-V/WSL subnets.
+                if (ni.isLoopback() || !ni.isUp() || isVirtualInterface(ni)) continue;
                 
                 // Find first active IPv4 address
                 java.util.Enumeration<InetAddress> addresses = ni.getInetAddresses();
@@ -454,10 +481,8 @@ public class NetworkDiscoveryService {
                     // Only use IPv4 addresses
                     if (addr instanceof Inet4Address) {
                         String ip = addr.getHostAddress();
-                        // Extract first 3 octets
-                        String[] parts = ip.split("\\.");
-                        if (parts.length == 4) {
-                            String prefix = parts[0] + "." + parts[1] + "." + parts[2];
+                        String prefix = extractPrefix(ip);
+                        if (prefix != null && isPrivatePrefix(prefix)) {
                             log.debug("NetworkDiscovery: current network prefix = {}", prefix);
                             return prefix;
                         }
@@ -507,20 +532,34 @@ public class NetworkDiscoveryService {
      * Gets the local machine's IP address (the gateway in hotspot mode).
      * Returns the first active IPv4 address found on non-loopback interfaces.
      */
-    private String getLocalIpAddress() {
+    private String getLocalIpAddress(String preferredPrefix) {
         try {
+            String fallback = null;
             java.util.Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
                 NetworkInterface ni = interfaces.nextElement();
-                if (ni.isLoopback() || !ni.isUp()) continue;
+                if (ni.isLoopback() || !ni.isUp() || isVirtualInterface(ni)) continue;
                 
                 java.util.Enumeration<InetAddress> addresses = ni.getInetAddresses();
                 while (addresses.hasMoreElements()) {
                     InetAddress addr = addresses.nextElement();
                     if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                        return addr.getHostAddress();
+                        String ip = addr.getHostAddress();
+                        String prefix = extractPrefix(ip);
+
+                        if (prefix != null && preferredPrefix != null && preferredPrefix.equals(prefix)) {
+                            return ip;
+                        }
+
+                        if (fallback == null && prefix != null && isPrivatePrefix(prefix)) {
+                            fallback = ip;
+                        }
                     }
                 }
+            }
+
+            if (fallback != null) {
+                return fallback;
             }
         } catch (Exception e) {
             log.warn("NetworkDiscovery: Failed to get local IP — {}", e.getMessage());
@@ -559,14 +598,9 @@ public class NetworkDiscoveryService {
                 return;
             }
             
-            try {
-                InetAddress addr = InetAddress.getByName(ip);
-                if (addr.isReachable(500)) {  // Shorter timeout for speed
-                    respondingIps.add(ip);
-                    log.debug("NetworkDiscovery: Active scan found responding IP: {}", ip);
-                }
-            } catch (Exception e) {
-                // Timeout or unreachable — skip
+            if (canReachHost(ip, 500)) {
+                respondingIps.add(ip);
+                log.debug("NetworkDiscovery: Active scan found responding IP: {}", ip);
             }
         });
         
@@ -621,6 +655,94 @@ public class NetworkDiscoveryService {
      */
     private String normalizeMac(String raw) {
         return raw.replace("-", ":").toLowerCase();
+    }
+
+    private String extractPrefix(String ip) {
+        if (ip == null) return null;
+        String[] parts = ip.split("\\.");
+        if (parts.length != 4) return null;
+        return parts[0] + "." + parts[1] + "." + parts[2];
+    }
+
+    private boolean isPrivatePrefix(String prefix) {
+        if (prefix == null) return false;
+
+        String[] p = prefix.split("\\.");
+        if (p.length != 3) return false;
+
+        try {
+            int a = Integer.parseInt(p[0]);
+            int b = Integer.parseInt(p[1]);
+
+            if (a == 10) return true;
+            if (a == 192 && b == 168) return true;
+            return a == 172 && b >= 16 && b <= 31;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private boolean isVirtualInterface(NetworkInterface ni) {
+        String name = ni.getName() != null ? ni.getName().toLowerCase() : "";
+        String display = ni.getDisplayName() != null ? ni.getDisplayName().toLowerCase() : "";
+        String id = name + " " + display;
+
+        return id.contains("virtual")
+                || id.contains("vmware")
+                || id.contains("vbox")
+                || id.contains("vethernet")
+                || id.contains("hyper-v")
+                || id.contains("docker")
+                || id.contains("wsl")
+                || id.contains("loopback")
+                || id.contains("npcap")
+                || id.contains("tunnel")
+                || id.contains("tap");
+    }
+
+    private boolean canReachHost(String ip, int timeoutMs) {
+        try {
+            InetAddress addr = InetAddress.getByName(ip);
+            if (addr.isReachable(timeoutMs)) {
+                return true;
+            }
+        } catch (Exception ignored) {
+            // Fall through to OS ping below
+        }
+
+        return pingWithSystemCommand(ip, timeoutMs);
+    }
+
+    private boolean pingWithSystemCommand(String ip, int timeoutMs) {
+        try {
+            String os = System.getProperty("os.name", "").toLowerCase();
+            Process process;
+
+            if (os.contains("win")) {
+                process = new ProcessBuilder("ping", "-n", "1", "-w", String.valueOf(timeoutMs), ip)
+                        .redirectErrorStream(true)
+                        .start();
+            } else {
+                int timeoutSeconds = Math.max(1, timeoutMs / 1000);
+                process = new ProcessBuilder("ping", "-c", "1", "-W", String.valueOf(timeoutSeconds), ip)
+                        .redirectErrorStream(true)
+                        .start();
+            }
+
+            String output = new String(process.getInputStream().readAllBytes()).toLowerCase();
+            int exit = process.waitFor();
+
+            if (exit == 0) {
+                return true;
+            }
+
+            return output.contains("ttl=")
+                    || output.contains("bytes from")
+                    || output.contains("1 received")
+                    || output.contains("received = 1");
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**

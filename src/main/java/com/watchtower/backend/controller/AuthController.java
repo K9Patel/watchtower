@@ -5,8 +5,10 @@ import com.watchtower.backend.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -74,7 +76,16 @@ public class AuthController {
 
     @GetMapping("/user")
     public ResponseEntity<Map<String, Object>> getUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() ||
+                authentication instanceof AnonymousAuthenticationToken) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
         String email = authentication.getName();
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
         UserDto user = authService.getCurrentUser(email);
         return ResponseEntity.ok(Map.of("user", user));
     }

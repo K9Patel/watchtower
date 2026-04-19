@@ -68,8 +68,17 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())  // Stateless JWT — no CSRF needed
             .authorizeHttpRequests(auth -> auth
-                // Auth endpoints — public
-                .requestMatchers("/api/v1/auth/**").permitAll()
+                // Protected auth endpoints
+                .requestMatchers("/api/v1/auth/user", "/api/v1/auth/logout").authenticated()
+                // Public auth endpoints
+                .requestMatchers(
+                        "/api/v1/auth/signup",
+                        "/api/v1/auth/verify-email",
+                        "/api/v1/auth/resend-verification",
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/forgot-password",
+                        "/api/v1/auth/reset-password"
+                ).permitAll()
                 // Existing dashboard API — public (backward compatibility)
                 .requestMatchers("/api/**").permitAll()
                 // Public: WebSocket endpoint (SockJS uses HTTP for handshake)

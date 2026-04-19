@@ -28,6 +28,7 @@ public class RealDataService {
     private final DashboardWebSocketService webSocketService;
     private final MacVendorService macVendorService;
     private final PacketCaptureService packetCaptureService;
+    private final NetworkHealthService networkHealthService;
 
     // tracks previous reading so we can calculate delta bytes
     private long lastBytesIn  = 0;
@@ -128,6 +129,9 @@ public class RealDataService {
 
             // Also ping all discovered devices and record basic usage logs
             recordDiscoveredDeviceActivity();
+
+            // Recalculate health after fresh usage data is persisted for this cycle.
+            networkHealthService.recalculateNow(false);
 
             // Push real-time update to React frontend
             webSocketService.pushDashboardUpdate(analysisService.getFullSummary());

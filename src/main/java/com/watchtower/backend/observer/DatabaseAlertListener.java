@@ -2,6 +2,7 @@ package com.watchtower.backend.observer;
 
 import com.watchtower.backend.entity.Alert;
 import com.watchtower.backend.repository.AlertRepository;
+import com.watchtower.backend.service.NetworkHealthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class DatabaseAlertListener implements AlertListener {
 
     private final AlertRepository alertRepository;
+    private final NetworkHealthService networkHealthService;
 
     @Override
     public void onAlert(Alert alert) {
@@ -38,5 +40,7 @@ public class DatabaseAlertListener implements AlertListener {
                 saved.getAlertType(),
                 saved.getSeverity(),
                 saved.getDevice().getDeviceName());
+
+        networkHealthService.recalculateAndBroadcast();
     }
 }
