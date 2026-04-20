@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { Activity, Users, Monitor, ShieldAlert } from 'lucide-react';
+import { Activity, Users, Monitor, ShieldAlert, Wifi } from 'lucide-react';
 
-const SummaryCards = ({ summary, devices = [], replay = null, healthScore = null }) => {
+const SummaryCards = ({ summary, devices = [], replay = null, healthScore = null, networkSpeed = null }) => {
   if (!summary) return null;
 
   const normalizedHealthScore = Number.isFinite(Number(healthScore))
@@ -78,6 +78,13 @@ const SummaryCards = ({ summary, devices = [], replay = null, healthScore = null
       value: 'Every 30s',
       subtitle: 'Z-Score active',
       icon: <ShieldAlert size={24} color="#f8fafc" />
+    },
+    {
+      title: 'WiFi Speed',
+      value: networkSpeed && networkSpeed.internetThroughput ? `${networkSpeed.internetThroughput} Mbps` : 'Measuring...',
+      subtitle: networkSpeed ? `Link: ${networkSpeed.wifiLinkSpeed || '—'} Mbps • ${networkSpeed.interfaceType || 'Detecting'}` : 'Querying network',
+      icon: <Wifi size={24} color="#f8fafc" />,
+      highlight: networkSpeed && networkSpeed.internetThroughput >= 50 ? '#10b981' : networkSpeed && networkSpeed.internetThroughput >= 10 ? '#f59e0b' : '#6b7280'
     }
   ];
 
@@ -93,7 +100,7 @@ const SummaryCards = ({ summary, devices = [], replay = null, healthScore = null
             <div className="neon-card-line bottoml"></div>
             <div className="neon-card-line rightl"></div>
             
-            <div className="summary-card-icon-shell">
+            <div className="summary-card-icon-shell" style={{ color: card.highlight || '#f8fafc' }}>
               {card.icon}
             </div>
             <div className="summary-card-content summary-card-content-themed" style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 2 }}>

@@ -157,11 +157,11 @@ public class DeviceController {
                     return info;
                 })
                 .sorted((a, b) -> {
-                    String aStatus = (String) a.get("status");
-                    String bStatus = (String) b.get("status");
+                    String aStatus = (String) a.getOrDefault("status", "UNKNOWN");
+                    String bStatus = (String) b.getOrDefault("status", "UNKNOWN");
                     if (!aStatus.equals(bStatus)) return "ONLINE".equals(aStatus) ? -1 : 1;
-                    Double bandA = (Double) a.get("bandwidth");
-                    Double bandB = (Double) b.get("bandwidth");
+                    Double bandA = (Double) a.getOrDefault("bandwidth", 0.0);
+                    Double bandB = (Double) b.getOrDefault("bandwidth", 0.0);
                     return bandB.compareTo(bandA);
                 })
                 .collect(Collectors.toList());

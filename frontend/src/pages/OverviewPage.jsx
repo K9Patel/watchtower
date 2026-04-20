@@ -20,6 +20,7 @@ const OverviewPage = () => {
   const [trend, setTrend] = useState(null);
   const [timeline, setTimeline] = useState(null);
   const [replaySnapshot, setReplaySnapshot] = useState(null);
+  const [networkSpeed, setNetworkSpeed] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toastAlert, setToastAlert] = useState(null);
   const [healthToast, setHealthToast] = useState(false);
@@ -58,10 +59,25 @@ const OverviewPage = () => {
     }
   };
 
-  // Initial data fetch only (no interval)
+  const fetchNetworkSpeed = async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/network/speed`);
+      setNetworkSpeed(data);
+    } catch (error) {
+      console.error('Error fetching network speed:', error);
+    }
+  };
+
+  // Initial data fetch and polling setup
   useEffect(() => {
     fetchDashboardData();
-  }, []); // Remove interval dependency
+    fetchNetworkSpeed();
+    
+    // Poll network speed every 30 seconds
+    const networkSpeedInterval = setInterval(fetchNetworkSpeed, 30000);
+    
+    return () => clearInterval(networkSpeedInterval);
+  }, []);
 
   // Handle incoming WebSocket dashboard updates
   useEffect(() => {
@@ -222,6 +238,7 @@ const OverviewPage = () => {
         devices={devices}
         replay={replaySnapshot}
         healthScore={summary?.health_score ?? summary?.healthScore}
+        networkSpeed={networkSpeed}
       />
 
       <IncidentTimelineReplay
